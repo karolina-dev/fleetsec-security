@@ -8,3 +8,4 @@ fleetsec.db
 htmlcov/
 .vscode/
 .idea/
+*.tar

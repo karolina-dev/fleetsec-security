@@ -1,10 +1,16 @@
+import os
 from datetime import datetime, timedelta, timezone
 
+
+import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from jose import JWTError, jwt
+from jwt import InvalidTokenError
 
-SECRET_KEY = "dev-secret-key-change-me"
+SECRET_KEY = os.getenv("FLEETSEC_SECRET_KEY")
+
+if not SECRET_KEY:
+    raise RuntimeError("FLEETSEC_SECRET_KEY no está configurada")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
@@ -13,11 +19,9 @@ security = HTTPBearer()
 
 def create_access_token(data: dict):
     to_encode = data.copy()
-
     expire = datetime.now(timezone.utc) + timedelta(
         minutes=ACCESS_TOKEN_EXPIRE_MINUTES
     )
-
     to_encode.update({"exp": expire})
 
     return jwt.encode(
@@ -53,7 +57,7 @@ def get_current_user(
             "role": role
         }
 
-    except JWTError:
+    except InvalidTokenError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token inválido o expirado"

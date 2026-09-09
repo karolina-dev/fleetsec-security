@@ -13,3 +13,16 @@ class UserResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class VehicleCreate(BaseModel):
+    plate: str
+
+
+class VehicleResponse(BaseModel):
+    id: int
+    plate: str
+    owner_id: int
+
+    class Config:
+        from_attributes = True

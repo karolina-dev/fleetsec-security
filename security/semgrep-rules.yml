@@ -1,0 +1,17 @@
+rules:
+  - id: fleetsec-hardcoded-secret
+    pattern: |
+      SECRET_KEY = "..."
+    message: "Posible secreto hardcodeado en el código fuente"
+    severity: ERROR
+    languages:
+      - python
+
+  - id: fleetsec-hardcoded-credentials
+    pattern: |
+      if data.username == "..." and data.password == "...":
+          ...
+    message: "Posibles credenciales hardcodeadas detectadas"
+    severity: ERROR
+    languages:
+      - python

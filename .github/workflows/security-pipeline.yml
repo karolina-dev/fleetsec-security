@@ -32,6 +32,19 @@ jobs:
         run: |
           python -m pytest
 
+      - name: Run SCA with Trivy
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}:/work" \
+            aquasec/trivy:0.74.0 \
+            fs \
+            --scanners vuln \
+            --format json \
+            --output /work/trivy-sca.json \
+            /work
+
+          python security/scripts/check_sca.py
+
       - name: Run SAST with Semgrep
         run: |
           python -m pip install semgrep

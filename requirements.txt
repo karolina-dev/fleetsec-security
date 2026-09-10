@@ -3,3 +3,4 @@ PyJWT==2.13.0
 pydantic==2.13.5
 SQLAlchemy==2.0.52
 uvicorn==0.52.4
+httpx2==2.12.0

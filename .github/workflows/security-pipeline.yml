@@ -37,6 +37,10 @@ jobs:
           python -m pip install semgrep
           semgrep scan --config auto --error
 
+      - name: Run custom Semgrep rules
+        run: |
+          semgrep scan --config security/semgrep-rules.yml --error
+
       - name: Build Docker image
         run: |
           docker build -t fleetsec-api:ci .

@@ -5,6 +5,12 @@ os.environ.setdefault(
     "fleetsec-dev-secret-key-2026-change-me"
 )
 
+if not os.getenv("FLEETSEC_ADMIN_USERNAME"):
+    os.environ["FLEETSEC_ADMIN_USERNAME"] = "admin"
+
+if not os.getenv("FLEETSEC_ADMIN_PASSWORD"):
+    os.environ["FLEETSEC_ADMIN_PASSWORD"] = "fleetsec-test-password"
+
 from fastapi.testclient import TestClient
 
 from app.main import app
@@ -27,8 +33,8 @@ def test_login():
     response = client.post(
         "/auth/login",
         json={
-            "username": "admin",
-            "password": "admin123"
+            "username": os.environ["FLEETSEC_ADMIN_USERNAME"],
+            "password": os.environ["FLEETSEC_ADMIN_PASSWORD"]
         }
     )
 
@@ -44,8 +50,8 @@ def test_get_current_user():
     login_response = client.post(
         "/auth/login",
         json={
-            "username": "admin",
-            "password": "admin123"
+            "username": os.environ["FLEETSEC_ADMIN_USERNAME"],
+            "password": os.environ["FLEETSEC_ADMIN_PASSWORD"]
         }
     )
 
@@ -60,6 +66,6 @@ def test_get_current_user():
 
     assert response.status_code == 200
     assert response.json() == {
-        "username": "admin",
+        "username": os.environ["FLEETSEC_ADMIN_USERNAME"],
         "role": "admin"
     }

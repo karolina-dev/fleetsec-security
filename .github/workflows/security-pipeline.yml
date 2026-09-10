@@ -32,6 +32,11 @@ jobs:
         run: |
           python -m pytest
 
+      - name: Run SAST with Semgrep
+        run: |
+          python -m pip install semgrep
+          semgrep scan --config auto --error
+
       - name: Build Docker image
         run: |
           docker build -t fleetsec-api:ci .

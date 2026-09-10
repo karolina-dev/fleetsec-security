@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class LoginRequest(BaseModel):
@@ -11,8 +11,7 @@ class UserResponse(BaseModel):
     username: str
     role: str
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class VehicleCreate(BaseModel):
@@ -24,5 +23,4 @@ class VehicleResponse(BaseModel):
     plate: str
     owner_id: int
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

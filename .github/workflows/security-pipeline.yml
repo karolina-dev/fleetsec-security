@@ -53,3 +53,21 @@ jobs:
           severity: HIGH,CRITICAL
           ignore-unfixed: false
           exit-code: "1"
+
+      - name: Generate CycloneDX SBOM
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}:/work" \
+            aquasec/trivy:0.74.0 \
+            fs \
+            --format cyclonedx \
+            --output /work/sbom.json \
+            /work
+
+      - name: Upload CycloneDX SBOM
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: fleetsec-sbom
+          path: sbom.json
+          if-no-files-found: error
+          retention-days: 30

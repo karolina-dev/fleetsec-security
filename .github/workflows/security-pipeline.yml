@@ -68,6 +68,9 @@ jobs:
 
       - name: Run DAST with OWASP ZAP
         run: |
+          mkdir -p security/zap/dast-output
+          chmod 777 security/zap/dast-output
+
           docker run --rm \
             --add-host=host.docker.internal:host-gateway \
             -e "ZAP_AUTH_HEADER_VALUE=$ZAP_AUTH_HEADER_VALUE" \
@@ -77,8 +80,8 @@ jobs:
 
       - name: Prepare DAST evidence
         run: |
-          mv zap-report.json security/zap/zap-report.json
-          mv sites-tree.yaml security/zap/sites-tree.yaml
+          mv security/zap/dast-output/zap-report.json security/zap/zap-report.json
+          mv security/zap/dast-output/sites-tree.yaml security/zap/sites-tree.yaml
 
       - name: Run SCA with Trivy
         run: |

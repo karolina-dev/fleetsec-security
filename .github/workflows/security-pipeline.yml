@@ -33,6 +33,10 @@ jobs:
           python -m pytest
 
       - name: Start API for DAST
+        env:
+          FLEETSEC_SECRET_KEY: ${{ secrets.FLEETSEC_SECRET_KEY }}
+          FLEETSEC_ADMIN_USERNAME: ${{ secrets.FLEETSEC_ADMIN_USERNAME }}
+          FLEETSEC_ADMIN_PASSWORD: ${{ secrets.FLEETSEC_ADMIN_PASSWORD }}
         run: |
           uvicorn app.main:app --host 0.0.0.0 --port 8000 > api.log 2>&1 &
           sleep 5
@@ -42,13 +46,21 @@ jobs:
             cat api.log
             exit 1
           fi
-
+          
       - name: Get JWT for DAST
+        env:
+          FLEETSEC_ADMIN_USERNAME: ${{ secrets.FLEETSEC_ADMIN_USERNAME }}
+          FLEETSEC_ADMIN_PASSWORD: ${{ secrets.FLEETSEC_ADMIN_PASSWORD }}
         run: |
+          payload=$(jq -n \
+            --arg username "$FLEETSEC_ADMIN_USERNAME" \
+            --arg password "$FLEETSEC_ADMIN_PASSWORD" \
+            '{username:$username,password:$password}')
+
           TOKEN=$(curl --fail --silent \
             --request POST \
             --header "Content-Type: application/json" \
-            --data '{"username":"admin","password":"fleetsec-test-password"}' \
+            --data "$payload" \
             http://127.0.0.1:8000/auth/login | \
             python -c "import json,sys; print(json.load(sys.stdin)['access_token'])")
 

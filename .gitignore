@@ -9,3 +9,5 @@ htmlcov/
 .vscode/
 .idea/
 *.tar
+security/zap/zap-report.json
+security/zap/sites-tree.yaml

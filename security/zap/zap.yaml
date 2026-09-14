@@ -1,0 +1,32 @@
+env:
+  contexts:
+    - name: fleetsec
+      urls:
+        - http://host.docker.internal:8000
+
+      authentication:
+        method: manual
+
+jobs:
+  - type: openapi
+    parameters:
+      apiUrl: http://host.docker.internal:8000/openapi.json
+      context: fleetsec
+      targetUrl: http://host.docker.internal:8000
+  
+  - type: activeScan
+    parameters:
+      context: fleetsec
+
+  - type: report
+    parameters:
+      template: traditional-json-plus
+      reportDir: /zap/wrk/security/zap
+      reportFile: zap-report.json
+
+  - type: export
+    parameters:
+      context: fleetsec
+      type: yaml
+      source: sitestree
+      fileName: /zap/wrk/security/zap/sites-tree.yaml

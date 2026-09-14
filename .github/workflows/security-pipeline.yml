@@ -32,6 +32,32 @@ jobs:
         run: |
           python -m pytest
 
+      - name: Start API for DAST
+        run: |
+          uvicorn app.main:app --host 0.0.0.0 --port 8000 > api.log 2>&1 &
+          sleep 5
+          curl --fail http://127.0.0.1:8000/health
+
+      - name: Get JWT for DAST
+        run: |
+          TOKEN=$(curl --fail --silent \
+            --request POST \
+            --header "Content-Type: application/json" \
+            --data '{"username":"admin","password":"fleetsec-test-password"}' \
+            http://127.0.0.1:8000/auth/login | \
+            python -c "import json,sys; print(json.load(sys.stdin)['access_token'])")
+
+          echo "ZAP_AUTH_HEADER_VALUE=Bearer $TOKEN" >> "$GITHUB_ENV"
+
+      - name: Run DAST with OWASP ZAP
+        run: |
+          docker run --rm \
+            --add-host=host.docker.internal:host-gateway \
+            -e "ZAP_AUTH_HEADER_VALUE=$ZAP_AUTH_HEADER_VALUE" \
+            -v "${{ github.workspace }}:/zap/wrk/:rw" \
+            zaproxy/zap-stable \
+            zap.sh -cmd -autorun /zap/wrk/security/zap/zap.yaml
+
       - name: Run SCA with Trivy
         run: |
           docker run --rm \

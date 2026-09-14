@@ -36,7 +36,12 @@ jobs:
         run: |
           uvicorn app.main:app --host 0.0.0.0 --port 8000 > api.log 2>&1 &
           sleep 5
-          curl --fail http://127.0.0.1:8000/health
+
+          if ! curl --fail http://127.0.0.1:8000/health; then
+            echo "=== API LOG ==="
+            cat api.log
+            exit 1
+          fi
 
       - name: Get JWT for DAST
         run: |

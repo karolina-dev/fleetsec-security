@@ -75,6 +75,11 @@ jobs:
             zaproxy/zap-stable \
             zap.sh -cmd -autorun /zap/wrk/security/zap/zap.yaml
 
+      - name: Prepare DAST evidence
+        run: |
+          mv zap-report.json security/zap/zap-report.json
+          mv sites-tree.yaml security/zap/sites-tree.yaml
+
       - name: Run SCA with Trivy
         run: |
           docker run --rm \

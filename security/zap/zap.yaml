@@ -21,7 +21,7 @@ jobs:
   - type: report
     parameters:
       template: traditional-json-plus
-      reportDir: /zap/wrk/security/zap
+      reportDir: /zap/wrk
       reportFile: zap-report.json
 
   - type: export
@@ -29,4 +29,4 @@ jobs:
       context: fleetsec
       type: yaml
       source: sitestree
-      fileName: /zap/wrk/security/zap/sites-tree.yaml
+      fileName: /zap/wrk/sites-tree.yaml

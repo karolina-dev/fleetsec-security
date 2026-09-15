@@ -21,7 +21,7 @@ provider "aws" {
 data "aws_caller_identity" "current" {}
 
 # ---------------------------------------------------------
-# KMS
+# KMS - Primary Region
 # ---------------------------------------------------------
 
 resource "aws_kms_key" "fleetsec" {
@@ -75,7 +75,43 @@ resource "aws_kms_alias" "fleetsec" {
 }
 
 # ---------------------------------------------------------
-# S3 - Security Logs
+# KMS - DR Region
+# ---------------------------------------------------------
+
+resource "aws_kms_key" "fleetsec_dr" {
+  provider = aws.dr
+
+  description             = "FleetSec DR security encryption key"
+  deletion_window_in_days = 7
+  enable_key_rotation     = true
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+
+    Statement = [
+      {
+        Sid    = "EnableAccountRootPermissions"
+        Effect = "Allow"
+
+        Principal = {
+          AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
+        }
+
+        Action   = "kms:*"
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+resource "aws_kms_alias" "fleetsec_dr" {
+  provider      = aws.dr
+  name          = "alias/fleetsec-security-dr"
+  target_key_id = aws_kms_key.fleetsec_dr.key_id
+}
+
+# ---------------------------------------------------------
+# S3 - Security Logs Primary
 # ---------------------------------------------------------
 
 resource "aws_s3_bucket" "security_logs" {
@@ -116,6 +152,12 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "security_logs" {
       kms_master_key_id = aws_kms_key.fleetsec.arn
     }
   }
+}
+
+resource "aws_s3_bucket_logging" "security_logs" {
+  bucket = aws_s3_bucket.security_logs.id
+  target_bucket = aws_s3_bucket.cloudtrail.id
+  target_prefix = "access-logs/security-logs/"
 }
 
 # ---------------------------------------------------------
@@ -167,9 +209,17 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "security_logs_dr"
   rule {
     apply_server_side_encryption_by_default {
       sse_algorithm     = "aws:kms"
-      kms_master_key_id = aws_kms_key.fleetsec.arn
+      kms_master_key_id = aws_kms_key.fleetsec_dr.arn
     }
   }
+}
+
+resource "aws_s3_bucket_logging" "security_logs_dr" {
+  provider = aws.dr
+
+  bucket        = aws_s3_bucket.security_logs_dr.id
+  target_bucket = aws_s3_bucket.cloudtrail_dr.id
+  target_prefix = "access-logs/security-logs-dr/"
 }
 
 # ---------------------------------------------------------
@@ -238,7 +288,7 @@ resource "aws_iam_role_policy" "s3_replication" {
 
     Statement = [
       {
-        Sid    = "ReadSourceBuckets"
+        Sid    = "ListSourceBuckets"
         Effect = "Allow"
 
         Action = [
@@ -280,6 +330,27 @@ resource "aws_iam_role_policy" "s3_replication" {
           "${aws_s3_bucket.security_logs_dr.arn}/*",
           "${aws_s3_bucket.cloudtrail_dr.arn}/*"
         ]
+      },
+      {
+        Sid    = "DecryptSourceObjects"
+        Effect = "Allow"
+
+        Action = [
+          "kms:Decrypt"
+        ]
+
+        Resource = aws_kms_key.fleetsec.arn
+      },
+      {
+        Sid    = "EncryptDestinationObjects"
+        Effect = "Allow"
+
+        Action = [
+          "kms:Encrypt",
+          "kms:GenerateDataKey"
+        ]
+
+        Resource = aws_kms_key.fleetsec_dr.arn
       }
     ]
   })
@@ -349,7 +420,7 @@ resource "aws_security_group" "fleetsec" {
 }
 
 # ---------------------------------------------------------
-# S3 - CloudTrail
+# S3 - CloudTrail Primary
 # ---------------------------------------------------------
 
 resource "aws_s3_bucket" "cloudtrail" {
@@ -363,6 +434,14 @@ resource "aws_s3_bucket_public_access_block" "cloudtrail" {
   block_public_policy     = true
   ignore_public_acls      = true
   restrict_public_buckets = true
+}
+
+resource "aws_s3_bucket_ownership_controls" "cloudtrail" {
+  bucket = aws_s3_bucket.cloudtrail.id
+
+  rule {
+    object_ownership = "BucketOwnerEnforced"
+  }
 }
 
 resource "aws_s3_bucket_versioning" "cloudtrail" {
@@ -405,6 +484,16 @@ resource "aws_s3_bucket_public_access_block" "cloudtrail_dr" {
   restrict_public_buckets = true
 }
 
+resource "aws_s3_bucket_ownership_controls" "cloudtrail_dr" {
+  provider = aws.dr
+
+  bucket = aws_s3_bucket.cloudtrail_dr.id
+
+  rule {
+    object_ownership = "BucketOwnerEnforced"
+  }
+}
+
 resource "aws_s3_bucket_versioning" "cloudtrail_dr" {
   provider = aws.dr
 
@@ -422,7 +511,8 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "cloudtrail_dr" {
 
   rule {
     apply_server_side_encryption_by_default {
-      sse_algorithm     = "AES256"
+      sse_algorithm     = "aws:kms"
+      kms_master_key_id = aws_kms_key.fleetsec_dr.arn
     }
   }
 }
@@ -432,7 +522,10 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "cloudtrail_dr" {
 # ---------------------------------------------------------
 
 resource "aws_s3_bucket_replication_configuration" "security_logs" {
-  depends_on = [aws_s3_bucket_versioning.security_logs]
+  depends_on = [
+    aws_s3_bucket_versioning.security_logs,
+    aws_s3_bucket_versioning.security_logs_dr
+  ]
 
   bucket = aws_s3_bucket.security_logs.id
   role   = aws_iam_role.s3_replication.arn
@@ -445,9 +538,19 @@ resource "aws_s3_bucket_replication_configuration" "security_logs" {
       prefix = ""
     }
 
+    source_selection_criteria {
+      sse_kms_encrypted_objects {
+        status = "Enabled"
+      }
+    }
+
     destination {
       bucket        = aws_s3_bucket.security_logs_dr.arn
       storage_class = "STANDARD"
+
+      encryption_configuration {
+        replica_kms_key_id = aws_kms_key.fleetsec_dr.arn
+      }
     }
   }
 }
@@ -457,7 +560,10 @@ resource "aws_s3_bucket_replication_configuration" "security_logs" {
 # ---------------------------------------------------------
 
 resource "aws_s3_bucket_replication_configuration" "cloudtrail" {
-  depends_on = [aws_s3_bucket_versioning.cloudtrail]
+  depends_on = [
+    aws_s3_bucket_versioning.cloudtrail,
+    aws_s3_bucket_versioning.cloudtrail_dr
+  ]
 
   bucket = aws_s3_bucket.cloudtrail.id
   role   = aws_iam_role.s3_replication.arn
@@ -470,9 +576,19 @@ resource "aws_s3_bucket_replication_configuration" "cloudtrail" {
       prefix = ""
     }
 
+    source_selection_criteria {
+      sse_kms_encrypted_objects {
+        status = "Enabled"
+      }
+    }
+
     destination {
       bucket        = aws_s3_bucket.cloudtrail_dr.arn
       storage_class = "STANDARD"
+
+      encryption_configuration {
+        replica_kms_key_id = aws_kms_key.fleetsec_dr.arn
+      }
     }
   }
 }
@@ -543,4 +659,8 @@ resource "aws_cloudtrail" "fleetsec" {
 
   cloud_watch_logs_group_arn = "${aws_cloudwatch_log_group.cloudtrail.arn}:*"
   cloud_watch_logs_role_arn  = aws_iam_role.cloudtrail_to_cloudwatch.arn
+
+  depends_on = [
+    aws_iam_role_policy.cloudtrail_to_cloudwatch
+  ]
 }

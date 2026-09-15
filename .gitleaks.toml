@@ -1,0 +1,16 @@
+title = "FleetSec Gitleaks Configuration"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "fleetsec-jwt"
+description = "JWT token"
+regex = '''(?i)\beyJ[a-zA-Z0-9_-]{10,}\.[a-zA-Z0-9_-]{10,}\.[a-zA-Z0-9_-]{10,}\b'''
+tags = ["jwt", "secret"]
+
+[[rules]]
+id = "fleetsec-db-password"
+description = "Database password assignment"
+regex = '''(?i)(password|passwd|pwd)\s*[:=]\s*["'][^"']{8,}["']'''
+tags = ["database", "password"]

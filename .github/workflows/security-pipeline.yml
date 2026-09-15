@@ -32,6 +32,11 @@ jobs:
         run: |
           python -m pytest
 
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Start API for DAST
         env:
           FLEETSEC_SECRET_KEY: ${{ secrets.FLEETSEC_SECRET_KEY }}
@@ -71,6 +76,7 @@ jobs:
           fi
 
           echo "ZAP_AUTH_HEADER_VALUE=Bearer $TOKEN" >> "$GITHUB_ENV"
+
       - name: Run DAST with OWASP ZAP
         run: |
           mkdir -p security/zap/dast-output

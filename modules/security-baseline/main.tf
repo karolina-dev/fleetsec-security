@@ -76,6 +76,7 @@ resource "aws_iam_policy" "fleetsec_security_readonly" {
 resource "aws_secretsmanager_secret" "fleetsec_app" {
   name                    = "fleetsec/app"
   description             = "Secrets for the FleetSec application"
+  kms_key_id              = aws_kms_key.fleetsec.arn
 
   recovery_window_in_days = 7
 }
@@ -110,6 +111,7 @@ resource "aws_cloudtrail" "fleetsec" {
   include_global_service_events = true
   is_multi_region_trail         = true
   enable_log_file_validation    = true
+  kms_key_id                    = aws_kms_key.fleetsec.arn
 }
 
 resource "aws_vpc" "fleetsec" {

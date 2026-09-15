@@ -15,6 +15,10 @@ provider "aws" {
 
 data "aws_caller_identity" "current" {}
 
+# ---------------------------------------------------------
+# KMS
+# ---------------------------------------------------------
+
 resource "aws_kms_key" "fleetsec" {
   description             = "FleetSec security encryption key"
   deletion_window_in_days = 7
@@ -65,6 +69,10 @@ resource "aws_kms_alias" "fleetsec" {
   target_key_id = aws_kms_key.fleetsec.key_id
 }
 
+# ---------------------------------------------------------
+# S3 - Security Logs
+# ---------------------------------------------------------
+
 resource "aws_s3_bucket" "security_logs" {
   bucket = var.security_logs_bucket
 }
@@ -97,6 +105,10 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "security_logs" {
   }
 }
 
+# ---------------------------------------------------------
+# IAM - Security Read Only
+# ---------------------------------------------------------
+
 resource "aws_iam_policy" "fleetsec_security_readonly" {
   name        = "FleetSecSecurityReadOnly"
   description = "Minimum read-only permissions for security operations"
@@ -126,12 +138,20 @@ resource "aws_iam_policy" "fleetsec_security_readonly" {
   })
 }
 
+# ---------------------------------------------------------
+# Secrets Manager
+# ---------------------------------------------------------
+
 resource "aws_secretsmanager_secret" "fleetsec_app" {
   name                    = "fleetsec/app"
   description             = "Secrets for the FleetSec application"
   kms_key_id              = aws_kms_key.fleetsec.arn
   recovery_window_in_days = 7
 }
+
+# ---------------------------------------------------------
+# VPC
+# ---------------------------------------------------------
 
 resource "aws_vpc" "fleetsec" {
   cidr_block           = "10.0.0.0/16"
@@ -142,6 +162,10 @@ resource "aws_vpc" "fleetsec" {
     Name = "fleetsec-vpc"
   }
 }
+
+# ---------------------------------------------------------
+# Security Group
+# ---------------------------------------------------------
 
 resource "aws_security_group" "fleetsec" {
   name        = "fleetsec-security-group"
@@ -177,6 +201,10 @@ resource "aws_security_group" "fleetsec" {
   }
 }
 
+# ---------------------------------------------------------
+# S3 - CloudTrail
+# ---------------------------------------------------------
+
 resource "aws_s3_bucket" "cloudtrail" {
   bucket = "${var.security_logs_bucket}-cloudtrail"
 }
@@ -201,6 +229,61 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "cloudtrail" {
   }
 }
 
+# ---------------------------------------------------------
+# CloudWatch Logs
+# ---------------------------------------------------------
+
+resource "aws_cloudwatch_log_group" "cloudtrail" {
+  name              = "/aws/cloudtrail/fleetsec"
+  retention_in_days = 90
+}
+
+resource "aws_iam_role" "cloudtrail_to_cloudwatch" {
+  name = "FleetSecCloudTrailCloudWatchRole"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+
+    Statement = [
+      {
+        Effect = "Allow"
+
+        Principal = {
+          Service = "cloudtrail.amazonaws.com"
+        }
+
+        Action = "sts:AssumeRole"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy" "cloudtrail_to_cloudwatch" {
+  name = "FleetSecCloudTrailCloudWatchPolicy"
+  role = aws_iam_role.cloudtrail_to_cloudwatch.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+
+    Statement = [
+      {
+        Effect = "Allow"
+
+        Action = [
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+        ]
+
+        Resource = "${aws_cloudwatch_log_group.cloudtrail.arn}:*"
+      }
+    ]
+  })
+}
+
+# ---------------------------------------------------------
+# CloudTrail
+# ---------------------------------------------------------
+
 resource "aws_cloudtrail" "fleetsec" {
   name                          = "fleetsec-audit"
   s3_bucket_name                = aws_s3_bucket.cloudtrail.id
@@ -208,4 +291,7 @@ resource "aws_cloudtrail" "fleetsec" {
   is_multi_region_trail         = true
   enable_log_file_validation    = true
   kms_key_id                    = aws_kms_key.fleetsec.arn
+
+  cloud_watch_logs_group_arn = "${aws_cloudwatch_log_group.cloudtrail.arn}:*"
+  cloud_watch_logs_role_arn  = aws_iam_role.cloudtrail_to_cloudwatch.arn
 }

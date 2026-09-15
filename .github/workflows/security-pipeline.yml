@@ -57,12 +57,14 @@ jobs:
             --arg password "$FLEETSEC_ADMIN_PASSWORD" \
             '{username:$username,password:$password}')
 
-          TOKEN=$(curl --fail --silent \
+          curl --fail --silent \
             --request POST \
             --header "Content-Type: application/json" \
             --data "$payload" \
-            http://127.0.0.1:8000/auth/login | \
-            python -c "import json,sys; print(json.load(sys.stdin)['access_token'])")
+            --output login-response.json \
+            http://127.0.0.1:8000/auth/login
+
+          TOKEN=$(python -c "import json; print(json.load(open('login-response.json'))['access_token'])")
 
           echo "ZAP_AUTH_HEADER_VALUE=Bearer $TOKEN" >> "$GITHUB_ENV"
 

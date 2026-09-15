@@ -1,8 +1,7 @@
-import json
 import sys
 from pathlib import Path
-from urllib.request import urlopen
 
+import httpx
 import yaml
 
 
@@ -13,8 +12,10 @@ ZAP_BASE_URL = "http://host.docker.internal:8000"
 
 
 def load_openapi():
-    with urlopen(OPENAPI_URL) as response:
-        return json.load(response)
+    response = httpx.get(OPENAPI_URL, timeout=10.0)
+    response.raise_for_status()
+
+    return response.json()
 
 
 def load_sites_tree():

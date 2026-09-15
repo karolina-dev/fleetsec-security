@@ -13,6 +13,17 @@ provider "aws" {
   region = var.aws_region
 }
 
+resource "aws_kms_key" "fleetsec" {
+  description             = "FleetSec security encryption key"
+  deletion_window_in_days = 7
+  enable_key_rotation     = true
+}
+
+resource "aws_kms_alias" "fleetsec" {
+  name          = "alias/fleetsec-security"
+  target_key_id = aws_kms_key.fleetsec.key_id
+}
+
 resource "aws_s3_bucket" "security_logs" {
   bucket = var.security_logs_bucket
 }
@@ -39,7 +50,8 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "security_logs" {
 
   rule {
     apply_server_side_encryption_by_default {
-      sse_algorithm = "AES256"
+      sse_algorithm     = "aws:kms"
+      kms_master_key_id = aws_kms_key.fleetsec.arn
     }
   }
 }
@@ -77,41 +89,7 @@ resource "aws_secretsmanager_secret" "fleetsec_app" {
   name                    = "fleetsec/app"
   description             = "Secrets for the FleetSec application"
   kms_key_id              = aws_kms_key.fleetsec.arn
-
   recovery_window_in_days = 7
-}
-
-resource "aws_kms_key" "fleetsec" {
-  description             = "FleetSec security encryption key"
-  deletion_window_in_days = 7
-  enable_key_rotation     = true
-}
-
-resource "aws_kms_alias" "fleetsec" {
-  name          = "alias/fleetsec-security"
-  target_key_id = aws_kms_key.fleetsec.key_id
-}
-
-resource "aws_s3_bucket" "cloudtrail" {
-  bucket = "${var.security_logs_bucket}-cloudtrail"
-}
-
-resource "aws_s3_bucket_public_access_block" "cloudtrail" {
-  bucket = aws_s3_bucket.cloudtrail.id
-
-  block_public_acls       = true
-  block_public_policy     = true
-  ignore_public_acls      = true
-  restrict_public_buckets = true
-}
-
-resource "aws_cloudtrail" "fleetsec" {
-  name                          = "fleetsec-audit"
-  s3_bucket_name                = aws_s3_bucket.cloudtrail.id
-  include_global_service_events = true
-  is_multi_region_trail         = true
-  enable_log_file_validation    = true
-  kms_key_id                    = aws_kms_key.fleetsec.arn
 }
 
 resource "aws_vpc" "fleetsec" {
@@ -156,4 +134,37 @@ resource "aws_security_group" "fleetsec" {
   tags = {
     Name = "fleetsec-security-group"
   }
+}
+
+resource "aws_s3_bucket" "cloudtrail" {
+  bucket = "${var.security_logs_bucket}-cloudtrail"
+}
+
+resource "aws_s3_bucket_public_access_block" "cloudtrail" {
+  bucket = aws_s3_bucket.cloudtrail.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "cloudtrail" {
+  bucket = aws_s3_bucket.cloudtrail.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm     = "aws:kms"
+      kms_master_key_id = aws_kms_key.fleetsec.arn
+    }
+  }
+}
+
+resource "aws_cloudtrail" "fleetsec" {
+  name                          = "fleetsec-audit"
+  s3_bucket_name                = aws_s3_bucket.cloudtrail.id
+  include_global_service_events = true
+  is_multi_region_trail         = true
+  enable_log_file_validation    = true
+  kms_key_id                    = aws_kms_key.fleetsec.arn
 }

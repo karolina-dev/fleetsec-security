@@ -1,7 +1,13 @@
 variable "aws_region" {
-  description = "AWS region"
+  description = "AWS primary region"
   type        = string
   default     = "us-east-1"
+}
+
+variable "dr_region" {
+  description = "AWS disaster recovery region for S3 replication"
+  type        = string
+  default     = "us-west-2"
 }
 
 variable "security_logs_bucket" {

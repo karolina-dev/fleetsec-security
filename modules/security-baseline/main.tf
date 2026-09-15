@@ -13,6 +13,11 @@ provider "aws" {
   region = var.aws_region
 }
 
+provider "aws" {
+  alias  = "dr"
+  region = var.dr_region
+}
+
 data "aws_caller_identity" "current" {}
 
 # ---------------------------------------------------------
@@ -94,8 +99,70 @@ resource "aws_s3_bucket_ownership_controls" "security_logs" {
   }
 }
 
+resource "aws_s3_bucket_versioning" "security_logs" {
+  bucket = aws_s3_bucket.security_logs.id
+
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
 resource "aws_s3_bucket_server_side_encryption_configuration" "security_logs" {
   bucket = aws_s3_bucket.security_logs.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm     = "aws:kms"
+      kms_master_key_id = aws_kms_key.fleetsec.arn
+    }
+  }
+}
+
+# ---------------------------------------------------------
+# S3 - Security Logs DR
+# ---------------------------------------------------------
+
+resource "aws_s3_bucket" "security_logs_dr" {
+  provider = aws.dr
+
+  bucket = "${var.security_logs_bucket}-dr"
+}
+
+resource "aws_s3_bucket_public_access_block" "security_logs_dr" {
+  provider = aws.dr
+
+  bucket = aws_s3_bucket.security_logs_dr.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+resource "aws_s3_bucket_ownership_controls" "security_logs_dr" {
+  provider = aws.dr
+
+  bucket = aws_s3_bucket.security_logs_dr.id
+
+  rule {
+    object_ownership = "BucketOwnerEnforced"
+  }
+}
+
+resource "aws_s3_bucket_versioning" "security_logs_dr" {
+  provider = aws.dr
+
+  bucket = aws_s3_bucket.security_logs_dr.id
+
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "security_logs_dr" {
+  provider = aws.dr
+
+  bucket = aws_s3_bucket.security_logs_dr.id
 
   rule {
     apply_server_side_encryption_by_default {
@@ -133,6 +200,86 @@ resource "aws_iam_policy" "fleetsec_security_readonly" {
         ]
 
         Resource = "*"
+      }
+    ]
+  })
+}
+
+# ---------------------------------------------------------
+# IAM - S3 Replication
+# ---------------------------------------------------------
+
+resource "aws_iam_role" "s3_replication" {
+  name = "FleetSecS3ReplicationRole"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+
+    Statement = [
+      {
+        Effect = "Allow"
+
+        Principal = {
+          Service = "s3.amazonaws.com"
+        }
+
+        Action = "sts:AssumeRole"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy" "s3_replication" {
+  name = "FleetSecS3ReplicationPolicy"
+  role = aws_iam_role.s3_replication.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+
+    Statement = [
+      {
+        Sid    = "ReadSourceBuckets"
+        Effect = "Allow"
+
+        Action = [
+          "s3:GetReplicationConfiguration",
+          "s3:ListBucket"
+        ]
+
+        Resource = [
+          aws_s3_bucket.security_logs.arn,
+          aws_s3_bucket.cloudtrail.arn
+        ]
+      },
+      {
+        Sid    = "ReadSourceObjects"
+        Effect = "Allow"
+
+        Action = [
+          "s3:GetObjectVersionForReplication",
+          "s3:GetObjectVersionAcl",
+          "s3:GetObjectVersionTagging"
+        ]
+
+        Resource = [
+          "${aws_s3_bucket.security_logs.arn}/*",
+          "${aws_s3_bucket.cloudtrail.arn}/*"
+        ]
+      },
+      {
+        Sid    = "ReplicateObjects"
+        Effect = "Allow"
+
+        Action = [
+          "s3:ReplicateObject",
+          "s3:ReplicateDelete",
+          "s3:ReplicateTags"
+        ]
+
+        Resource = [
+          "${aws_s3_bucket.security_logs_dr.arn}/*",
+          "${aws_s3_bucket.cloudtrail_dr.arn}/*"
+        ]
       }
     ]
   })
@@ -218,6 +365,14 @@ resource "aws_s3_bucket_public_access_block" "cloudtrail" {
   restrict_public_buckets = true
 }
 
+resource "aws_s3_bucket_versioning" "cloudtrail" {
+  bucket = aws_s3_bucket.cloudtrail.id
+
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
 resource "aws_s3_bucket_server_side_encryption_configuration" "cloudtrail" {
   bucket = aws_s3_bucket.cloudtrail.id
 
@@ -230,12 +385,106 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "cloudtrail" {
 }
 
 # ---------------------------------------------------------
+# S3 - CloudTrail DR
+# ---------------------------------------------------------
+
+resource "aws_s3_bucket" "cloudtrail_dr" {
+  provider = aws.dr
+
+  bucket = "${var.security_logs_bucket}-cloudtrail-dr"
+}
+
+resource "aws_s3_bucket_public_access_block" "cloudtrail_dr" {
+  provider = aws.dr
+
+  bucket = aws_s3_bucket.cloudtrail_dr.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+resource "aws_s3_bucket_versioning" "cloudtrail_dr" {
+  provider = aws.dr
+
+  bucket = aws_s3_bucket.cloudtrail_dr.id
+
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "cloudtrail_dr" {
+  provider = aws.dr
+
+  bucket = aws_s3_bucket.cloudtrail_dr.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm     = "AES256"
+    }
+  }
+}
+
+# ---------------------------------------------------------
+# S3 Replication - Security Logs
+# ---------------------------------------------------------
+
+resource "aws_s3_bucket_replication_configuration" "security_logs" {
+  depends_on = [aws_s3_bucket_versioning.security_logs]
+
+  bucket = aws_s3_bucket.security_logs.id
+  role   = aws_iam_role.s3_replication.arn
+
+  rule {
+    id     = "security-logs-dr"
+    status = "Enabled"
+
+    filter {
+      prefix = ""
+    }
+
+    destination {
+      bucket        = aws_s3_bucket.security_logs_dr.arn
+      storage_class = "STANDARD"
+    }
+  }
+}
+
+# ---------------------------------------------------------
+# S3 Replication - CloudTrail
+# ---------------------------------------------------------
+
+resource "aws_s3_bucket_replication_configuration" "cloudtrail" {
+  depends_on = [aws_s3_bucket_versioning.cloudtrail]
+
+  bucket = aws_s3_bucket.cloudtrail.id
+  role   = aws_iam_role.s3_replication.arn
+
+  rule {
+    id     = "cloudtrail-dr"
+    status = "Enabled"
+
+    filter {
+      prefix = ""
+    }
+
+    destination {
+      bucket        = aws_s3_bucket.cloudtrail_dr.arn
+      storage_class = "STANDARD"
+    }
+  }
+}
+
+# ---------------------------------------------------------
 # CloudWatch Logs
 # ---------------------------------------------------------
 
 resource "aws_cloudwatch_log_group" "cloudtrail" {
   name              = "/aws/cloudtrail/fleetsec"
   retention_in_days = 90
+  kms_key_id        = aws_kms_key.fleetsec.arn
 }
 
 resource "aws_iam_role" "cloudtrail_to_cloudwatch" {

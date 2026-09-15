@@ -57,17 +57,20 @@ jobs:
             --arg password "$FLEETSEC_ADMIN_PASSWORD" \
             '{username:$username,password:$password}')
 
-          curl --fail --silent \
+          response=$(curl --fail --silent \
             --request POST \
             --header "Content-Type: application/json" \
             --data "$payload" \
-            --output login-response.json \
-            http://127.0.0.1:8000/auth/login
+            http://127.0.0.1:8000/auth/login)
 
-          TOKEN=$(python -c "import json; print(json.load(open('login-response.json'))['access_token'])")
+          TOKEN=$(printf '%s' "$response" | jq -r '.access_token')
+
+          if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
+            echo "ERROR: No se pudo obtener el JWT"
+            exit 1
+          fi
 
           echo "ZAP_AUTH_HEADER_VALUE=Bearer $TOKEN" >> "$GITHUB_ENV"
-
       - name: Run DAST with OWASP ZAP
         run: |
           mkdir -p security/zap/dast-output

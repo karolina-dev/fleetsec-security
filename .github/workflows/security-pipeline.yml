@@ -152,6 +152,10 @@ jobs:
         with:
           terraform_version: "1.6.6"
 
+      - name: Terraform Format
+        run: |
+          terraform fmt -recursive modules/security-baseline
+
       - name: Terraform Format Check
         run: |
           terraform fmt -check -recursive modules/security-baseline

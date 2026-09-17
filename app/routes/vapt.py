@@ -8,6 +8,7 @@ from urllib.parse import urlparse
 import jwt
 import httpx
 from lxml import etree
+from ..models import User
 
 from ..database import get_db
 
@@ -180,4 +181,34 @@ def v04_parse_xml(xml: str):
         return {
         "valid": False,
         "error": "XML inválido o no permitido",
+    }
+
+# V05 - Mass Assignment
+# Remediated version: only explicitly allowed fields can be updated.
+@router.put("/v05/users/{username}")
+def v05_update_user(
+    username: str,
+    data: dict,
+    db: Session = Depends(get_db),
+):
+    user = db.query(User).filter(User.username == username).first()
+
+    if not user:
+        return {
+            "error": "Usuario no encontrado"
+        }
+
+    allowed_fields = {"username"}
+
+    for field in allowed_fields:
+        if field in data:
+            setattr(user, field, data[field])
+
+    db.commit()
+    db.refresh(user)
+
+    return {
+        "id": user.id,
+        "username": user.username,
+        "role": user.role,
     }

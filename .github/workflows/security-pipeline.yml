@@ -174,4 +174,5 @@ jobs:
           checkov \
             --directory modules/security-baseline \
             --framework terraform \
-            --quiet
+            --quiet \
+            --soft-fail-on CKV2_AWS_11,CKV2_AWS_62

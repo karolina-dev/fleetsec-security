@@ -7,6 +7,7 @@ import socket
 from urllib.parse import urlparse
 import jwt
 import httpx
+from lxml import etree
 
 from ..database import get_db
 
@@ -150,3 +151,33 @@ def v03_fetch_url(url: str):
         return {
             "error": "No fue posible consultar el recurso"
         }
+
+# V04 - XXE
+# Remediated version: external entities and DTD processing are disabled.
+@router.post("/v04/xml")
+def v04_parse_xml(xml: str):
+    try:
+        parser = etree.XMLParser(
+            resolve_entities=False,
+            load_dtd=False,
+            no_network=True,
+        )
+
+        root = etree.fromstring(
+            xml.encode("utf-8"),
+            parser,
+        )
+
+        return {
+            "valid": True,
+            "content": etree.tostring(
+                root,
+                encoding="unicode",
+            ),
+        }
+
+    except Exception:
+        return {
+        "valid": False,
+        "error": "XML inválido o no permitido",
+    }

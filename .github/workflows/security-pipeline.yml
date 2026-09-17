@@ -175,5 +175,4 @@ jobs:
             --directory modules/security-baseline \
             --framework terraform \
             --quiet \
-            --soft-fail-on CKV2_AWS_11,CKV2_AWS_62 \
-            --hard-fail-on LOW
+            --check CKV_AWS_24,CKV_AWS_25

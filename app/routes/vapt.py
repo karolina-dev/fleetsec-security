@@ -9,6 +9,7 @@ import jwt
 import httpx
 from lxml import etree
 from ..models import User
+from pathlib import Path
 
 from ..database import get_db
 
@@ -212,3 +213,35 @@ def v05_update_user(
         "username": user.username,
         "role": user.role,
     }
+
+# V06 - Path Traversal
+# Remediated version: resolved path must remain inside the allowed directory.
+@router.get("/v06/file")
+def v06_read_file(filename: str):
+    base_dir = Path("vapt_files").resolve()
+
+    try:
+        file_path = (base_dir / filename).resolve()
+
+        if file_path != base_dir and base_dir not in file_path.parents:
+            return {
+                "error": "Acceso al archivo no permitido"
+            }
+
+        if not file_path.is_file():
+            return {
+                "error": "Archivo no encontrado"
+            }
+
+        with open(file_path, "r", encoding="utf-8") as file:
+            content = file.read()
+
+        return {
+            "filename": filename,
+            "content": content,
+        }
+
+    except Exception:
+        return {
+            "error": "No fue posible leer el archivo"
+        }

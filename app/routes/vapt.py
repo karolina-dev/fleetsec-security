@@ -10,6 +10,10 @@ import httpx
 from lxml import etree
 from ..models import User
 from pathlib import Path
+import time
+from collections import defaultdict, deque
+
+from fastapi import HTTPException, Request
 
 from ..database import get_db
 
@@ -245,3 +249,40 @@ def v06_read_file(filename: str):
         return {
             "error": "No fue posible leer el archivo"
         }
+
+# V07 - Missing Rate Limiting
+# Remediated version: 5 requests per minute per client.
+RATE_LIMIT = 5
+RATE_WINDOW = 60
+
+request_history = defaultdict(deque)
+
+
+@router.get("/v07/search")
+def v07_search(q: str, request: Request):
+    client_ip = request.client.host if request.client else "unknown"
+    now = time.monotonic()
+
+    history = request_history[client_ip]
+
+    while history and now - history[0] > RATE_WINDOW:
+        history.popleft()
+
+    if len(history) >= RATE_LIMIT:
+        raise HTTPException(
+            status_code=429,
+            detail="Límite de solicitudes excedido. Intente nuevamente más tarde.",
+            headers={"Retry-After": str(RATE_WINDOW)},
+        )
+
+    history.append(now)
+
+    return {
+        "query": q,
+        "results": [
+            {
+                "id": 1,
+                "vehicle": "ABC123",
+            }
+        ],
+    }

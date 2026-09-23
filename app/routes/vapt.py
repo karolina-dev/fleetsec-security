@@ -14,6 +14,7 @@ import time
 from collections import defaultdict, deque
 import logging
 import re
+import os
 
 from fastapi import HTTPException, Request
 
@@ -372,4 +373,27 @@ def v09_get_vehicle(
         "id": vehicle.id,
         "plate": vehicle.plate,
         "owner_id": vehicle.owner_id,
+    }
+
+  # V10 - Hardcoded Credentials
+# Remediated version: credential is loaded from an environment variable.
+@router.get("/v10/admin")
+def v10_admin(api_key: str):
+    expected_api_key = os.getenv("FLEETSEC_VAPT_API_KEY")
+
+    if not expected_api_key:
+        raise HTTPException(
+            status_code=500,
+            detail="Credencial VAPT no configurada",
+        )
+
+    if api_key == expected_api_key:
+        return {
+            "authenticated": True,
+            "message": "Acceso administrativo concedido",
+        }
+
+    return {
+        "authenticated": False,
+        "message": "Credencial inválida",
     }

@@ -12,3 +12,5 @@ htmlcov/
 security/zap/zap-report.json
 security/zap/sites-tree.yaml
 security/vapt.log
+modules/security-baseline/.terraform/
+security/zap/dast-output/

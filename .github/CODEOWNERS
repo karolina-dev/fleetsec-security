@@ -1,0 +1,5 @@
+﻿# FleetSec - Break-glass reviewers
+# Requisito del proceso: 2 aprobadores distintos.
+# El segundo usuario debe reemplazar REVIEWER_2 cuando exista un collaborator real.
+
+* @karolina-dev

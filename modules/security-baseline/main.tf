@@ -155,7 +155,7 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "security_logs" {
 }
 
 resource "aws_s3_bucket_logging" "security_logs" {
-  bucket = aws_s3_bucket.security_logs.id
+  bucket        = aws_s3_bucket.security_logs.id
   target_bucket = aws_s3_bucket.cloudtrail.id
   target_prefix = "access-logs/security-logs/"
 }

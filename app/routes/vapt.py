@@ -12,6 +12,8 @@ from ..models import User
 from pathlib import Path
 import time
 from collections import defaultdict, deque
+import logging
+import re
 
 from fastapi import HTTPException, Request
 
@@ -285,4 +287,54 @@ def v07_search(q: str, request: Request):
                 "vehicle": "ABC123",
             }
         ],
+    }
+
+# V08 - Logging de PII
+# Remediated version: PII is redacted before being written to logs.
+
+class PIISanitizingFormatter(logging.Formatter):
+    def format(self, record):
+        message = super().format(record)
+
+        message = re.sub(
+            r"(?i)(document=)[^,\s]+",
+            r"\1[REDACTED]",
+            message,
+        )
+
+        message = re.sub(
+            r"(?i)(email=)[^,\s]+",
+            r"\1[REDACTED]",
+            message,
+        )
+
+        return message
+
+
+vapt_logger = logging.getLogger("fleetsec.vapt")
+vapt_logger.setLevel(logging.INFO)
+
+if not vapt_logger.handlers:
+    handler = logging.FileHandler(
+        "security/vapt.log",
+        encoding="utf-8",
+    )
+
+    handler.setFormatter(
+        PIISanitizingFormatter("%(levelname)s %(message)s")
+    )
+
+    vapt_logger.addHandler(handler)
+
+
+@router.post("/v08/log")
+def v08_log_pii(document: str, email: str):
+    vapt_logger.info(
+        "Usuario procesado document=%s email=%s",
+        document,
+        email,
+    )
+
+    return {
+        "status": "processed",
     }

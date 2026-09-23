@@ -11,3 +11,4 @@ htmlcov/
 *.tar
 security/zap/zap-report.json
 security/zap/sites-tree.yaml
+security/vapt.log

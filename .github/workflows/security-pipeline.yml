@@ -8,12 +8,21 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+  issues: write
+
 jobs:
   security:
     name: Tests and Container Security
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
+      # =====================================================
+      # 1. SOURCE + DEPENDENCIES
+      # =====================================================
+
       - name: Checkout repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
 
@@ -28,14 +37,127 @@ jobs:
           pip install -r requirements.txt
           pip install pytest
 
+      # =====================================================
+      # 2. TESTS
+      # =====================================================
+
       - name: Run tests
         run: |
           python -m pytest
+
+      # =====================================================
+      # 3. SECRETS
+      # =====================================================
 
       - name: Run Gitleaks
         uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # =====================================================
+      # 4. SAST
+      # =====================================================
+
+      - name: Run SAST with Semgrep
+        run: |
+          python -m pip install semgrep
+          semgrep scan --config auto --error
+
+      - name: Run custom Semgrep rules
+        run: |
+          semgrep scan \
+            --config security/semgrep-rules.yml \
+            --error
+
+      # =====================================================
+      # 5. SCA
+      # =====================================================
+
+      - name: Run SCA with Trivy
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}:/work" \
+            aquasec/trivy:0.74.0 \
+            fs \
+            --scanners vuln \
+            --format json \
+            --output /work/trivy-sca.json \
+            /work
+
+          python security/scripts/check_sca.py
+
+      # =====================================================
+      # 6. DOCKER IMAGE
+      # =====================================================
+
+      - name: Build Docker image
+        run: |
+          docker build -t fleetsec-api:ci .
+
+      - name: Scan Docker image with Trivy
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25
+        with:
+          image-ref: fleetsec-api:ci
+          format: table
+          severity: HIGH,CRITICAL
+          ignore-unfixed: false
+          exit-code: "1"
+
+      # =====================================================
+      # 7. SBOM
+      # =====================================================
+
+      - name: Generate CycloneDX SBOM
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}:/work" \
+            aquasec/trivy:0.74.0 \
+            fs \
+            --format cyclonedx \
+            --output /work/sbom.json \
+            /work
+
+      - name: Upload CycloneDX SBOM
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: fleetsec-sbom
+          path: sbom.json
+          if-no-files-found: error
+          retention-days: 30
+
+      # =====================================================
+      # 8. TERRAFORM / IAC
+      # =====================================================
+
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd
+        with:
+          terraform_version: "1.6.6"
+
+      - name: Terraform Format Check
+        run: |
+          terraform fmt -check -recursive modules/security-baseline
+
+      - name: Terraform Init
+        run: |
+          terraform -chdir=modules/security-baseline init -backend=false
+
+      - name: Terraform Validate
+        run: |
+          terraform -chdir=modules/security-baseline validate
+
+      - name: Run Checkov
+        run: |
+          python -m pip install checkov
+          checkov \
+            --directory modules/security-baseline \
+            --framework terraform \
+            --quiet \
+            --check CKV_AWS_24,CKV_AWS_25
+
+      # =====================================================
+      # 9. START APPLICATION FOR DAST
+      # =====================================================
 
       - name: Start API for DAST
         env:
@@ -43,7 +165,11 @@ jobs:
           FLEETSEC_ADMIN_USERNAME: ${{ secrets.FLEETSEC_ADMIN_USERNAME }}
           FLEETSEC_ADMIN_PASSWORD: ${{ secrets.FLEETSEC_ADMIN_PASSWORD }}
         run: |
-          uvicorn app.main:app --host 0.0.0.0 --port 8000 > api.log 2>&1 &
+          uvicorn app.main:app \
+            --host 0.0.0.0 \
+            --port 8000 \
+            > api.log 2>&1 &
+
           sleep 5
 
           if ! curl --fail http://127.0.0.1:8000/health; then
@@ -51,7 +177,11 @@ jobs:
             cat api.log
             exit 1
           fi
-          
+
+      # =====================================================
+      # 10. AUTHENTICATION FOR ZAP
+      # =====================================================
+
       - name: Get JWT for DAST
         env:
           FLEETSEC_ADMIN_USERNAME: ${{ secrets.FLEETSEC_ADMIN_USERNAME }}
@@ -77,6 +207,10 @@ jobs:
 
           echo "ZAP_AUTH_HEADER_VALUE=Bearer $TOKEN" >> "$GITHUB_ENV"
 
+      # =====================================================
+      # 11. DAST - OWASP ZAP
+      # =====================================================
+
       - name: Run DAST with OWASP ZAP
         run: |
           mkdir -p security/zap/dast-output
@@ -85,94 +219,74 @@ jobs:
           docker run --rm \
             --add-host=host.docker.internal:host-gateway \
             -e "ZAP_AUTH_HEADER_VALUE=$ZAP_AUTH_HEADER_VALUE" \
+            -e "ZAP_AUTH_HEADER_SITE=host.docker.internal" \
             -v "${{ github.workspace }}:/zap/wrk/:rw" \
             zaproxy/zap-stable \
-            zap.sh -cmd -autorun /zap/wrk/security/zap/zap.yaml
+            zap.sh -cmd \
+            -autorun /zap/wrk/security/zap/zap.yaml
 
       - name: Prepare DAST evidence
         run: |
-          mv security/zap/dast-output/zap-report.json security/zap/zap-report.json
-          mv security/zap/dast-output/sites-tree.yaml security/zap/sites-tree.yaml
+          mv \
+            security/zap/dast-output/zap-report.json \
+            security/zap/zap-report.json
 
-      - name: Run SCA with Trivy
+          mv \
+            security/zap/dast-output/sites-tree.yaml \
+            security/zap/sites-tree.yaml
+
+      # =====================================================
+      # 12. DAST COVERAGE
+      # =====================================================
+
+      - name: Validate ZAP OpenAPI coverage
         run: |
-          docker run --rm \
-            -v "${{ github.workspace }}:/work" \
-            aquasec/trivy:0.74.0 \
-            fs \
-            --scanners vuln \
-            --format json \
-            --output /work/trivy-sca.json \
-            /work
+          python security/scripts/check_zap_coverage.py
 
-          python security/scripts/check_sca.py
+      # =====================================================
+      # 13. DAST RISK ANALYSIS
+      # =====================================================
 
-      - name: Run SAST with Semgrep
+      - name: Analyze ZAP results
         run: |
-          python -m pip install semgrep
-          semgrep scan --config auto --error
+          python security/scripts/check_zap_results.py
 
-      - name: Run custom Semgrep rules
+      # =====================================================
+      # 14. MEDIUM FINDINGS
+      # =====================================================
+
+      - name: Ensure security/medium label
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          semgrep scan --config security/semgrep-rules.yml --error
+          gh label create "security/medium" \
+            --color "FBCA04" \
+            --description "ZAP MEDIUM security findings" \
+            --force
 
-      - name: Build Docker image
+      - name: Create GitHub Issue for ZAP MEDIUM
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          docker build -t fleetsec-api:ci .
+          if grep -q '^## ' security/zap/medium-summary.md; then
+            gh issue create \
+              --title "[Security] ZAP MEDIUM findings" \
+              --body-file security/zap/medium-summary.md \
+              --label "security/medium"
+          else
+            echo "No hay hallazgos MEDIUM."
+          fi
 
-      - name: Scan Docker image with Trivy
-        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25
-        with:
-          image-ref: fleetsec-api:ci
-          format: table
-          severity: HIGH,CRITICAL
-          ignore-unfixed: false
-          exit-code: "1"
+      # =====================================================
+      # 15. HIGH / CRITICAL GATE
+      # =====================================================
 
-      - name: Generate CycloneDX SBOM
+      - name: Enforce ZAP HIGH/CRITICAL gate
         run: |
-          docker run --rm \
-            -v "${{ github.workspace }}:/work" \
-            aquasec/trivy:0.74.0 \
-            fs \
-            --format cyclonedx \
-            --output /work/sbom.json \
-            /work
+          if [ -s security/zap/high-critical-found.txt ]; then
+            echo "FAIL: ZAP encontró vulnerabilidades HIGH/CRITICAL."
+            cat security/zap/high-critical-found.txt
+            exit 1
+          fi
 
-      - name: Upload CycloneDX SBOM
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        with:
-          name: fleetsec-sbom
-          path: sbom.json
-          if-no-files-found: error
-          retention-days: 30
-
-      - name: Install Terraform
-        uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd
-        with:
-          terraform_version: "1.6.6"
-
-      - name: Terraform Format
-        run: |
-          terraform fmt -recursive modules/security-baseline
-
-      - name: Terraform Format Check
-        run: |
-          terraform fmt -check -recursive modules/security-baseline
-
-      - name: Terraform Init
-        run: |
-          terraform -chdir=modules/security-baseline init -backend=false
-
-      - name: Terraform Validate
-        run: |
-          terraform -chdir=modules/security-baseline validate
-
-      - name: Run Checkov
-        run: |
-          python -m pip install checkov
-          checkov \
-            --directory modules/security-baseline \
-            --framework terraform \
-            --quiet \
-            --check CKV_AWS_24,CKV_AWS_25
+          echo "PASS: No hay vulnerabilidades HIGH/CRITICAL."

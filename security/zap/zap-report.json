@@ -1,0 +1,1049 @@
+{
+    "@programName": "ZAP",
+    "@version": "2.17.0",
+    "@generated": "Wed, 23 Sept 2026 03:30:54",
+	"created": "2026-09-23T03:30:54.535043703Z",
+	"insights":[
+		{
+			"level": "Info",
+			"reason": "Informational",
+			"site": "",
+			"key": "insight.network.failure",
+			"description": "Percentage of network failures",
+			"statistic": "1"
+		},
+		{
+			"level": "Info",
+			"reason": "Informational",
+			"site": "http://host.docker.internal:8000",
+			"key": "insight.code.2xx",
+			"description": "Percentage of responses with status code 2xx",
+			"statistic": "35"
+		},
+		{
+			"level": "Info",
+			"reason": "Informational",
+			"site": "http://host.docker.internal:8000",
+			"key": "insight.code.4xx",
+			"description": "Percentage of responses with status code 4xx",
+			"statistic": "64"
+		},
+		{
+			"level": "Info",
+			"reason": "Informational",
+			"site": "http://host.docker.internal:8000",
+			"key": "insight.endpoint.ctype.application/json",
+			"description": "Percentage of endpoints with content type application/json",
+			"statistic": "100"
+		},
+		{
+			"level": "Info",
+			"reason": "Informational",
+			"site": "http://host.docker.internal:8000",
+			"key": "insight.endpoint.method.GET",
+			"description": "Percentage of endpoints with method GET",
+			"statistic": "58"
+		},
+		{
+			"level": "Info",
+			"reason": "Informational",
+			"site": "http://host.docker.internal:8000",
+			"key": "insight.endpoint.method.POST",
+			"description": "Percentage of endpoints with method POST",
+			"statistic": "29"
+		},
+		{
+			"level": "Info",
+			"reason": "Informational",
+			"site": "http://host.docker.internal:8000",
+			"key": "insight.endpoint.method.PUT",
+			"description": "Percentage of endpoints with method PUT",
+			"statistic": "11"
+		},
+		{
+			"level": "Info",
+			"reason": "Informational",
+			"site": "http://host.docker.internal:8000",
+			"key": "insight.endpoint.total",
+			"description": "Count of total endpoints",
+			"statistic": "17"
+		},
+		{
+			"level": "Info",
+			"reason": "Informational",
+			"site": "http://host.docker.internal:8000",
+			"key": "insight.response.slow",
+			"description": "Percentage of slow responses",
+			"statistic": "1"
+		},
+		{
+			"level": "Info",
+			"reason": "Informational",
+			"site": "https://host.docker.internal:8000",
+			"key": "insight.endpoint.method.GET",
+			"description": "Percentage of endpoints with method GET",
+			"statistic": "100"
+		},
+		{
+			"level": "Info",
+			"reason": "Informational",
+			"site": "https://host.docker.internal:8000",
+			"key": "insight.endpoint.total",
+			"description": "Count of total endpoints",
+			"statistic": "1"
+		}
+    ],
+	"site":[ 
+        {
+            "@name": "https://host.docker.internal:8000",
+            "@host": "host.docker.internal",
+            "@port": "8000",
+            "@ssl": "true",
+            "alerts": [ 
+            ],
+            "statistics":{ 
+            }
+        },
+        {
+            "@name": "http://host.docker.internal:8000",
+            "@host": "host.docker.internal",
+            "@port": "8000",
+            "@ssl": "false",
+            "alerts": [ 
+                {
+                    "pluginid": "10106",
+                    "alertRef": "10106",
+                    "alert": "HTTP Only Site",
+                    "name": "HTTP Only Site",
+                    "riskcode": "2",
+                    "confidence": "2",
+                    "riskdesc": "Medium (Medium)",
+                    "desc": "<p>The site is only served under HTTP and not HTTPS.</p>",
+                    "instances":[ 
+                        {
+                            "id": "28",
+                            "uri": "http://host.docker.internal:8000/",
+                            "nodeName": "https:\/\/host.docker.internal:8000\/",
+                            "method": "GET",
+                            "param": "",
+                            "attack": "",
+                            "evidence": "",
+                            "otherinfo": "Failed to connect.\nZAP attempted to connect via: https://host.docker.internal:8000/",
+                            "request-header": "GET https://host.docker.internal:8000/ HTTP/1.1\r\nhost: host.docker.internal:8000\r\nuser-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36\r\npragma: no-cache\r\ncache-control: no-cache\r\naccept: application/json\r\n\r\n",
+                            "request-body": "",
+                            "response-header": "HTTP/1.0 0\r\n\r\n",
+                            "response-body": ""
+                        }
+                    ],
+                    "count": "1",
+                    "systemic": false,
+                    "solution": "<p>Configure your web or application server to use SSL (https).</p>",
+                    "otherinfo": "<p>Failed to connect.</p><p>ZAP attempted to connect via: https://host.docker.internal:8000/</p>",
+                    "reference": "<p>https://cheatsheetseries.owasp.org/cheatsheets/Transport_Layer_Protection_Cheat_Sheet.html</p><p>https://letsencrypt.org/</p>",
+                    "cweid": "311",
+                    "wascid": "4",
+                    "sourceid": "59",
+                    "tags":[ 
+                        {
+                            "tag": "OWASP_2025_A04",
+                            "link": "https:\/\/owasp.org\/Top10\/2025\/A04_2025-Cryptographic_Failures\/"
+                        },
+                        {
+                            "tag": "OWASP_2021_A05",
+                            "link": "https:\/\/owasp.org\/Top10\/A05_2021-Security_Misconfiguration\/"
+                        },
+                        {
+                            "tag": "POLICY_QA_FULL",
+                            "link": ""
+                        },
+                        {
+                            "tag": "POLICY_PENTEST",
+                            "link": ""
+                        },
+                        {
+                            "tag": "OWASP_2017_A06",
+                            "link": "https:\/\/owasp.org\/www-project-top-ten\/2017\/A6_2017-Security_Misconfiguration.html"
+                        },
+                        {
+                            "tag": "WSTG-v42-CRYP-03",
+                            "link": "https:\/\/owasp.org\/www-project-web-security-testing-guide\/v42\/4-Web_Application_Security_Testing\/09-Testing_for_Weak_Cryptography\/03-Testing_for_Sensitive_Information_Sent_via_Unencrypted_Channels"
+                        },
+                        {
+                            "tag": "CWE-311",
+                            "link": "https:\/\/cwe.mitre.org\/data\/definitions\/311.html"
+                        }
+                    ]
+                },
+                {
+                    "pluginid": "10021",
+                    "alertRef": "10021",
+                    "alert": "X-Content-Type-Options Header Missing",
+                    "name": "X-Content-Type-Options Header Missing",
+                    "riskcode": "1",
+                    "confidence": "2",
+                    "riskdesc": "Low (Medium)",
+                    "desc": "<p>The Anti-MIME-Sniffing header X-Content-Type-Options was not set to 'nosniff'. This allows older versions of Internet Explorer and Chrome to perform MIME-sniffing on the response body, potentially causing the response body to be interpreted and displayed as a content type other than the declared content type. Current (early 2014) and legacy versions of Firefox will use the declared content type (if one is set), rather than performing MIME-sniffing.</p>",
+                    "instances":[ 
+                        {
+                            "id": "0",
+                            "uri": "http://host.docker.internal:8000/openapi.json",
+                            "nodeName": "http:\/\/host.docker.internal:8000\/openapi.json",
+                            "method": "GET",
+                            "param": "x-content-type-options",
+                            "attack": "",
+                            "evidence": "",
+                            "otherinfo": "This issue still applies to error type pages (401, 403, 500, etc.) as those pages are often still affected by injection issues, in which case there is still concern for browsers sniffing pages away from their actual content type.\nAt \"High\" threshold this scan rule will not alert on client or server error responses.",
+                            "request-header": "GET http://host.docker.internal:8000/openapi.json HTTP/1.1\r\nhost: host.docker.internal:8000\r\nuser-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36\r\npragma: no-cache\r\ncache-control: no-cache\r\nAccept: application/json,*/*\r\n\r\n",
+                            "request-body": "",
+                            "response-header": "HTTP/1.1 200 OK\r\ndate: Wed, 23 Sep 2026 03:28:24 GMT\r\nserver: uvicorn\r\ncontent-length: 7984\r\ncontent-type: application/json\r\n\r\n",
+                            "response-body": "{\"openapi\":\"3.1.0\",\"info\":{\"title\":\"FleetSec API\",\"description\":\"API for fleet telemetry management\",\"version\":\"1.0.0\"},\"paths\":{\"/auth/login\":{\"post\":{\"tags\":[\"Authentication\"],\"summary\":\"Login\",\"operationId\":\"login_auth_login_post\",\"requestBody\":{\"content\":{\"application/json\":{\"schema\":{\"$ref\":\"#/components/schemas/LoginRequest\"}}},\"required\":true},\"responses\":{\"200\":{\"description\":\"Successful Response\",\"content\":{\"application/json\":{\"schema\":{}}}},\"422\":{\"description\":\"Validation Error\",\"content\":{\"application/json\":{\"schema\":{\"$ref\":\"#/components/schemas/HTTPValidationError\"}}}}}}},\"/users/me\":{\"get\":{\"tags\":[\"Users\"],\"summary\":\"Get Me\",\"operationId\":\"get_me_users_me_get\",\"responses\":{\"200\":{\"description\":\"Successful Response\",\"content\":{\"application/json\":{\"schema\":{}}}}},\"security\":[{\"HTTPBearer\":[]}]}},\"/vehicles/\":{\"post\":{\"tags\":[\"Vehicles\"],\"summary\":\"Create Vehicle\",\"operationId\":\"create_vehicle_vehicles__post\",\"requestBody\":{\"content\":{\"application/json\":{\"schema\":{\"$ref\":\"#/components/schemas/VehicleCreate\"}}},\"required\":true},\"responses\":{\"200\":{\"description\":\"Successful Response\",\"content\":{\"application/json\":{\"schema\":{\"$ref\":\"#/components/schemas/VehicleResponse\"}}}},\"422\":{\"description\":\"Validation Error\",\"content\":{\"application/json\":{\"schema\":{\"$ref\":\"#/components/schemas/HTTPValidationError\"}}}}},\"security\":[{\"HTTPBearer\":[]}]}},\"/vapt/v01/vehicles\":{\"get\":{\"tags\":[\"VAPT\"],\"summary\":\"V01 Search Vehicles\",\"operationId\":\"v01_search_vehicles_vapt_v01_vehicles_get\",\"parameters\":[{\"name\":\"plate\",\"in\":\"query\",\"required\":true,\"schema\":{\"type\":\"string\",\"title\":\"Plate\"}}],\"responses\":{\"200\":{\"description\":\"Successful Response\",\"content\":{\"application/json\":{\"schema\":{}}}},\"422\":{\"description\":\"Validation Error\",\"content\":{\"application/json\":{\"schema\":{\"$ref\":\"#/components/schemas/HTTPValidationError\"}}}}}}},\"/vapt/v02/verify\":{\"get\":{\"tags\":[\"VAPT\"],\"summary\":\"V02 Verify Token\",\"operationId\":\"v02_verify_token_vapt_v02_verify_get\",\"parameters\":[{\"name\":\"token\",\"in\":\"query\",\"required\":true,\"schema\":{\"type\":\"string\",\"title\":\"Token\"}}],\"responses\":{\"200\":{\"description\":\"Successful Response\",\"content\":{\"application/json\":{\"schema\":{}}}},\"422\":{\"description\":\"Validation Error\",\"content\":{\"application/json\":{\"schema\":{\"$ref\":\"#/components/schemas/HTTPValidationError\"}}}}}}},\"/vapt/v03/fetch\":{\"get\":{\"tags\":[\"VAPT\"],\"summary\":\"V03 Fetch Url\",\"operationId\":\"v03_fetch_url_vapt_v03_fetch_get\",\"parameters\":[{\"name\":\"url\",\"in\":\"query\",\"required\":true,\"schema\":{\"type\":\"string\",\"title\":\"Url\"}}],\"responses\":{\"200\":{\"description\":\"Successful Response\",\"content\":{\"application/json\":{\"schema\":{}}}},\"422\":{\"description\":\"Validation Error\",\"content\":{\"application/json\":{\"schema\":{\"$ref\":\"#/components/schemas/HTTPValidationError\"}}}}}}},\"/vapt/v04/xml\":{\"post\":{\"tags\":[\"VAPT\"],\"summary\":\"V04 Parse Xml\",\"operationId\":\"v04_parse_xml_vapt_v04_xml_post\",\"parameters\":[{\"name\":\"xml\",\"in\":\"query\",\"required\":true,\"schema\":{\"type\":\"string\",\"title\":\"Xml\"}}],\"responses\":{\"200\":{\"description\":\"Successful Response\",\"content\":{\"application/json\":{\"schema\":{}}}},\"422\":{\"description\":\"Validation Error\",\"content\":{\"application/json\":{\"schema\":{\"$ref\":\"#/components/schemas/HTTPValidationError\"}}}}}}},\"/vapt/v05/users/{username}\":{\"put\":{\"tags\":[\"VAPT\"],\"summary\":\"V05 Update User\",\"operationId\":\"v05_update_user_vapt_v05_users__username__put\",\"parameters\":[{\"name\":\"username\",\"in\":\"path\",\"required\":true,\"schema\":{\"type\":\"string\",\"title\":\"Username\"}}],\"requestBody\":{\"required\":true,\"content\":{\"application/json\":{\"schema\":{\"type\":\"object\",\"additionalProperties\":true,\"title\":\"Data\"}}}},\"responses\":{\"200\":{\"description\":\"Successful Response\",\"content\":{\"application/json\":{\"schema\":{}}}},\"422\":{\"description\":\"Validation Error\",\"content\":{\"application/json\":{\"schema\":{\"$ref\":\"#/components/schemas/HTTPValidationError\"}}}}}}},\"/vapt/v06/file\":{\"get\":{\"tags\":[\"VAPT\"],\"summary\":\"V06 Read File\",\"operationId\":\"v06_read_file_vapt_v06_file_get\",\"parameters\":[{\"name\":\"filename\",\"in\":\"query\",\"required\":true,\"schema\":{\"type\":\"string\",\"title\":\"Filename\"}}],\"responses\":{\"200\":{\"description\":\"Successful Response\",\"content\":{\"application/json\":{\"schema\":{}}}},\"422\":{\"description\":\"Validation Error\",\"content\":{\"application/json\":{\"schema\":{\"$ref\":\"#/components/schemas/HTTPValidationError\"}}}}}}},\"/vapt/v07/login\":{\"post\":{\"tags\":[\"VAPT\"],\"summary\":\"V07 Login\",\"operationId\":\"v07_login_vapt_v07_login_post\",\"parameters\":[{\"name\":\"username\",\"in\":\"query\",\"required\":true,\"schema\":{\"type\":\"string\",\"title\":\"Username\"}},{\"name\":\"password\",\"in\":\"query\",\"required\":true,\"schema\":{\"type\":\"string\",\"title\":\"Password\"}}],\"responses\":{\"200\":{\"description\":\"Successful Response\",\"content\":{\"application/json\":{\"schema\":{}}}},\"422\":{\"description\":\"Validation Error\",\"content\":{\"application/json\":{\"schema\":{\"$ref\":\"#/components/schemas/HTTPValidationError\"}}}}}}},\"/vapt/v08/log\":{\"post\":{\"tags\":[\"VAPT\"],\"summary\":\"V08 Log Pii\",\"operationId\":\"v08_log_pii_vapt_v08_log_post\",\"parameters\":[{\"name\":\"document\",\"in\":\"query\",\"required\":true,\"schema\":{\"type\":\"string\",\"title\":\"Document\"}},{\"name\":\"email\",\"in\":\"query\",\"required\":true,\"schema\":{\"type\":\"string\",\"title\":\"Email\"}}],\"responses\":{\"200\":{\"description\":\"Successful Response\",\"content\":{\"application/json\":{\"schema\":{}}}},\"422\":{\"description\":\"Validation Error\",\"content\":{\"application/json\":{\"schema\":{\"$ref\":\"#/components/schemas/HTTPValidationError\"}}}}}}},\"/vapt/v09/vehicles/{vehicle_id}\":{\"get\":{\"tags\":[\"VAPT\"],\"summary\":\"V09 Get Vehicle\",\"operationId\":\"v09_get_vehicle_vapt_v09_vehicles__vehicle_id__get\",\"security\":[{\"HTTPBearer\":[]}],\"parameters\":[{\"name\":\"vehicle_id\",\"in\":\"path\",\"required\":true,\"schema\":{\"type\":\"integer\",\"title\":\"Vehicle Id\"}}],\"responses\":{\"200\":{\"description\":\"Successful Response\",\"content\":{\"application/json\":{\"schema\":{}}}},\"422\":{\"description\":\"Validation Error\",\"content\":{\"application/json\":{\"schema\":{\"$ref\":\"#/components/schemas/HTTPValidationError\"}}}}}}},\"/vapt/v10/admin\":{\"get\":{\"tags\":[\"VAPT\"],\"summary\":\"V10 Admin\",\"operationId\":\"v10_admin_vapt_v10_admin_get\",\"parameters\":[{\"name\":\"api_key\",\"in\":\"query\",\"required\":true,\"schema\":{\"type\":\"string\",\"title\":\"Api Key\"}}],\"responses\":{\"200\":{\"description\":\"Successful Response\",\"content\":{\"application/json\":{\"schema\":{}}}},\"422\":{\"description\":\"Validation Error\",\"content\":{\"application/json\":{\"schema\":{\"$ref\":\"#/components/schemas/HTTPValidationError\"}}}}}}},\"/health\":{\"get\":{\"summary\":\"Health\",\"operationId\":\"health_health_get\",\"responses\":{\"200\":{\"description\":\"Successful Response\",\"content\":{\"application/json\":{\"schema\":{}}}}}}},\"/\":{\"get\":{\"summary\":\"Root\",\"operationId\":\"root__get\",\"responses\":{\"200\":{\"description\":\"Successful Response\",\"content\":{\"application/json\":{\"schema\":{}}}}}}}},\"components\":{\"schemas\":{\"HTTPValidationError\":{\"properties\":{\"detail\":{\"items\":{\"$ref\":\"#/components/schemas/ValidationError\"},\"type\":\"array\",\"title\":\"Detail\"}},\"type\":\"object\",\"title\":\"HTTPValidationError\"},\"LoginRequest\":{\"properties\":{\"username\":{\"type\":\"string\",\"title\":\"Username\"},\"password\":{\"type\":\"string\",\"title\":\"Password\"}},\"type\":\"object\",\"required\":[\"username\",\"password\"],\"title\":\"LoginRequest\"},\"ValidationError\":{\"properties\":{\"loc\":{\"items\":{\"anyOf\":[{\"type\":\"string\"},{\"type\":\"integer\"}]},\"type\":\"array\",\"title\":\"Location\"},\"msg\":{\"type\":\"string\",\"title\":\"Message\"},\"type\":{\"type\":\"string\",\"title\":\"Error Type\"},\"input\":{\"title\":\"Input\"},\"ctx\":{\"type\":\"object\",\"title\":\"Context\"}},\"type\":\"object\",\"required\":[\"loc\",\"msg\",\"type\"],\"title\":\"ValidationError\"},\"VehicleCreate\":{\"properties\":{\"plate\":{\"type\":\"string\",\"title\":\"Plate\"}},\"type\":\"object\",\"required\":[\"plate\"],\"title\":\"VehicleCreate\"},\"VehicleResponse\":{\"properties\":{\"id\":{\"type\":\"integer\",\"title\":\"Id\"},\"plate\":{\"type\":\"string\",\"title\":\"Plate\"},\"owner_id\":{\"type\":\"integer\",\"title\":\"Owner Id\"}},\"type\":\"object\",\"required\":[\"id\",\"plate\",\"owner_id\"],\"title\":\"VehicleResponse\"}},\"securitySchemes\":{\"HTTPBearer\":{\"type\":\"http\",\"scheme\":\"bearer\"}}}}"
+                        },
+                        {
+                            "id": "2",
+                            "uri": "http://host.docker.internal:8000/vapt/v01/vehicles?plate=plate",
+                            "nodeName": "http:\/\/host.docker.internal:8000\/vapt\/v01\/vehicles (plate)",
+                            "method": "GET",
+                            "param": "x-content-type-options",
+                            "attack": "",
+                            "evidence": "",
+                            "otherinfo": "This issue still applies to error type pages (401, 403, 500, etc.) as those pages are often still affected by injection issues, in which case there is still concern for browsers sniffing pages away from their actual content type.\nAt \"High\" threshold this scan rule will not alert on client or server error responses.",
+                            "request-header": "GET http://host.docker.internal:8000/vapt/v01/vehicles?plate=plate HTTP/1.1\r\nhost: host.docker.internal:8000\r\nuser-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36\r\npragma: no-cache\r\ncache-control: no-cache\r\naccept: application/json\r\ncontent-length: 0\r\n\r\n",
+                            "request-body": "",
+                            "response-header": "HTTP/1.1 200 OK\r\ndate: Wed, 23 Sep 2026 03:28:24 GMT\r\nserver: uvicorn\r\ncontent-length: 14\r\ncontent-type: application/json\r\n\r\n",
+                            "response-body": "{\"results\":[]}"
+                        },
+                        {
+                            "id": "7",
+                            "uri": "http://host.docker.internal:8000/vapt/v02/verify?token=token",
+                            "nodeName": "http:\/\/host.docker.internal:8000\/vapt\/v02\/verify (token)",
+                            "method": "GET",
+                            "param": "x-content-type-options",
+                            "attack": "",
+                            "evidence": "",
+                            "otherinfo": "This issue still applies to error type pages (401, 403, 500, etc.) as those pages are often still affected by injection issues, in which case there is still concern for browsers sniffing pages away from their actual content type.\nAt \"High\" threshold this scan rule will not alert on client or server error responses.",
+                            "request-header": "GET http://host.docker.internal:8000/vapt/v02/verify?token=token HTTP/1.1\r\nhost: host.docker.internal:8000\r\nuser-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36\r\npragma: no-cache\r\ncache-control: no-cache\r\naccept: application/json\r\ncontent-length: 0\r\n\r\n",
+                            "request-body": "",
+                            "response-header": "HTTP/1.1 200 OK\r\ndate: Wed, 23 Sep 2026 03:28:24 GMT\r\nserver: uvicorn\r\ncontent-length: 61\r\ncontent-type: application/json\r\n\r\n",
+                            "response-body": "{\"valid\":false,\"detail\":\"Token inv\u00E1lido o firma no v\u00E1lida\"}"
+                        },
+                        {
+                            "id": "5",
+                            "uri": "http://host.docker.internal:8000/auth/login",
+                            "nodeName": "http:\/\/host.docker.internal:8000\/auth\/login ()({username,password})",
+                            "method": "POST",
+                            "param": "x-content-type-options",
+                            "attack": "",
+                            "evidence": "",
+                            "otherinfo": "This issue still applies to error type pages (401, 403, 500, etc.) as those pages are often still affected by injection issues, in which case there is still concern for browsers sniffing pages away from their actual content type.\nAt \"High\" threshold this scan rule will not alert on client or server error responses.",
+                            "request-header": "POST http://host.docker.internal:8000/auth/login HTTP/1.1\r\nhost: host.docker.internal:8000\r\nuser-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36\r\npragma: no-cache\r\ncache-control: no-cache\r\naccept: application/json\r\ncontent-type: application/json\r\ncontent-length: 40\r\n\r\n",
+                            "request-body": "{\"username\":\"John Doe\",\"password\":\"ZAP\"}",
+                            "response-header": "HTTP/1.1 200 OK\r\ndate: Wed, 23 Sep 2026 03:28:24 GMT\r\nserver: uvicorn\r\ncontent-length: 31\r\ncontent-type: application/json\r\n\r\n",
+                            "response-body": "{\"error\":\"Invalid credentials\"}"
+                        },
+                        {
+                            "id": "3",
+                            "uri": "http://host.docker.internal:8000/vapt/v04/xml?xml=xml",
+                            "nodeName": "http:\/\/host.docker.internal:8000\/vapt\/v04\/xml (xml)",
+                            "method": "POST",
+                            "param": "x-content-type-options",
+                            "attack": "",
+                            "evidence": "",
+                            "otherinfo": "This issue still applies to error type pages (401, 403, 500, etc.) as those pages are often still affected by injection issues, in which case there is still concern for browsers sniffing pages away from their actual content type.\nAt \"High\" threshold this scan rule will not alert on client or server error responses.",
+                            "request-header": "POST http://host.docker.internal:8000/vapt/v04/xml?xml=xml HTTP/1.1\r\nhost: host.docker.internal:8000\r\nuser-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36\r\npragma: no-cache\r\ncache-control: no-cache\r\naccept: application/json\r\ncontent-length: 0\r\n\r\n",
+                            "request-body": "",
+                            "response-header": "HTTP/1.1 200 OK\r\ndate: Wed, 23 Sep 2026 03:28:24 GMT\r\nserver: uvicorn\r\ncontent-length: 54\r\ncontent-type: application/json\r\n\r\n",
+                            "response-body": "{\"valid\":false,\"error\":\"XML inv\u00E1lido o no permitido\"}"
+                        }
+                    ],
+                    "count": "5",
+                    "systemic": true,
+                    "solution": "<p>Ensure that the application/web server sets the Content-Type header appropriately, and that it sets the X-Content-Type-Options header to 'nosniff' for all web pages.</p><p>If possible, ensure that the end user uses a standards-compliant and modern web browser that does not perform MIME-sniffing at all, or that can be directed by the web application/web server to not perform MIME-sniffing.</p>",
+                    "otherinfo": "<p>This issue still applies to error type pages (401, 403, 500, etc.) as those pages are often still affected by injection issues, in which case there is still concern for browsers sniffing pages away from their actual content type.</p><p>At \"High\" threshold this scan rule will not alert on client or server error responses.</p>",
+                    "reference": "<p>https://learn.microsoft.com/en-us/previous-versions/windows/internet-explorer/ie-developer/compatibility/gg622941(v=vs.85)</p><p>https://owasp.org/www-community/Security_Headers</p>",
+                    "cweid": "693",
+                    "wascid": "15",
+                    "sourceid": "1",
+                    "tags":[ 
+                        {
+                            "tag": "OWASP_2021_A05",
+                            "link": "https:\/\/owasp.org\/Top10\/A05_2021-Security_Misconfiguration\/"
+                        },
+                        {
+                            "tag": "POLICY_QA_STD",
+                            "link": ""
+                        },
+                        {
+                            "tag": "POLICY_PENTEST",
+                            "link": ""
+                        },
+                        {
+                            "tag": "SYSTEMIC",
+                            "link": "https:\/\/www.zaproxy.org\/docs\/desktop\/addons\/common-library\/alerttags\/#systemic"
+                        },
+                        {
+                            "tag": "CWE-693",
+                            "link": "https:\/\/cwe.mitre.org\/data\/definitions\/693.html"
+                        },
+                        {
+                            "tag": "OWASP_2017_A06",
+                            "link": "https:\/\/owasp.org\/www-project-top-ten\/2017\/A6_2017-Security_Misconfiguration.html"
+                        },
+                        {
+                            "tag": "OWASP_2025_A02",
+                            "link": "https:\/\/owasp.org\/Top10\/2025\/A02_2025-Security_Misconfiguration\/"
+                        }
+                    ]
+                },
+                {
+                    "pluginid": "10111",
+                    "alertRef": "10111",
+                    "alert": "Authentication Request Identified",
+                    "name": "Authentication Request Identified",
+                    "riskcode": "0",
+                    "confidence": "3",
+                    "riskdesc": "Informational (High)",
+                    "desc": "<p>The given request has been identified as an authentication request. The 'Other Info' field contains a set of key=value lines which identify any relevant fields. If the request is in a context which has an Authentication Method set to \"Auto-Detect\" then this rule will change the authentication to match the request identified.</p>",
+                    "instances":[ 
+                        {
+                            "id": "1",
+                            "uri": "http://host.docker.internal:8000/auth/login",
+                            "nodeName": "http:\/\/host.docker.internal:8000\/auth\/login ()({username,password})",
+                            "method": "POST",
+                            "param": "username",
+                            "attack": "",
+                            "evidence": "password",
+                            "otherinfo": "userParam=username\nuserValue=John Doe\npasswordParam=password",
+                            "request-header": "POST http://host.docker.internal:8000/auth/login HTTP/1.1\r\nhost: host.docker.internal:8000\r\nuser-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36\r\npragma: no-cache\r\ncache-control: no-cache\r\naccept: application/json\r\ncontent-type: application/json\r\ncontent-length: 40\r\n\r\n",
+                            "request-body": "{\"username\":\"John Doe\",\"password\":\"ZAP\"}",
+                            "response-header": "HTTP/1.1 200 OK\r\ndate: Wed, 23 Sep 2026 03:28:24 GMT\r\nserver: uvicorn\r\ncontent-length: 31\r\ncontent-type: application/json\r\n\r\n",
+                            "response-body": "{\"error\":\"Invalid credentials\"}"
+                        }
+                    ],
+                    "count": "1",
+                    "systemic": false,
+                    "solution": "<p>This is an informational alert rather than a vulnerability and so there is nothing to fix.</p>",
+                    "otherinfo": "<p>userParam=username</p><p>userValue=John Doe</p><p>passwordParam=password</p>",
+                    "reference": "<p>https://www.zaproxy.org/docs/desktop/addons/authentication-helper/auth-req-id/</p>",
+                    "cweid": "-1",
+                    "wascid": "-1",
+                    "sourceid": "3",
+                    "tags":[ 
+                    ]
+                },
+                {
+                    "pluginid": "10024",
+                    "alertRef": "10024",
+                    "alert": "Information Disclosure - Sensitive Information in URL",
+                    "name": "Information Disclosure - Sensitive Information in URL",
+                    "riskcode": "0",
+                    "confidence": "2",
+                    "riskdesc": "Informational (Medium)",
+                    "desc": "<p>The request appeared to contain sensitive information leaked in the URL. This can violate PCI and most organizational compliance policies. You can configure the list of strings for this check to add or remove values specific to your environment.</p>",
+                    "instances":[ 
+                        {
+                            "id": "4",
+                            "uri": "http://host.docker.internal:8000/vapt/v02/verify?token=token",
+                            "nodeName": "http:\/\/host.docker.internal:8000\/vapt\/v02\/verify (token)",
+                            "method": "GET",
+                            "param": "token",
+                            "attack": "",
+                            "evidence": "token",
+                            "otherinfo": "The URL contains potentially sensitive information. The following string was found via the pattern: token\ntoken",
+                            "request-header": "GET http://host.docker.internal:8000/vapt/v02/verify?token=token HTTP/1.1\r\nhost: host.docker.internal:8000\r\nuser-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36\r\npragma: no-cache\r\ncache-control: no-cache\r\naccept: application/json\r\ncontent-length: 0\r\n\r\n",
+                            "request-body": "",
+                            "response-header": "HTTP/1.1 200 OK\r\ndate: Wed, 23 Sep 2026 03:28:24 GMT\r\nserver: uvicorn\r\ncontent-length: 61\r\ncontent-type: application/json\r\n\r\n",
+                            "response-body": "{\"valid\":false,\"detail\":\"Token inv\u00E1lido o firma no v\u00E1lida\"}"
+                        },
+                        {
+                            "id": "8",
+                            "uri": "http://host.docker.internal:8000/vapt/v07/login?username=username&password=ZAP",
+                            "nodeName": "http:\/\/host.docker.internal:8000\/vapt\/v07\/login (password,username)",
+                            "method": "POST",
+                            "param": "password",
+                            "attack": "",
+                            "evidence": "password",
+                            "otherinfo": "The URL contains potentially sensitive information. The following string was found via the pattern: pass\npassword",
+                            "request-header": "POST http://host.docker.internal:8000/vapt/v07/login?username=username&password=ZAP HTTP/1.1\r\nhost: host.docker.internal:8000\r\nuser-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36\r\npragma: no-cache\r\ncache-control: no-cache\r\naccept: application/json\r\ncontent-length: 0\r\n\r\n",
+                            "request-body": "",
+                            "response-header": "HTTP/1.1 401 Unauthorized\r\ndate: Wed, 23 Sep 2026 03:28:24 GMT\r\nserver: uvicorn\r\ncontent-length: 36\r\ncontent-type: application/json\r\n\r\n",
+                            "response-body": "{\"detail\":\"Credenciales inv\u00E1lidas\"}"
+                        },
+                        {
+                            "id": "12",
+                            "uri": "http://host.docker.internal:8000/vapt/v07/login?username=username&password=ZAP",
+                            "nodeName": "http:\/\/host.docker.internal:8000\/vapt\/v07\/login (password,username)",
+                            "method": "POST",
+                            "param": "username",
+                            "attack": "",
+                            "evidence": "username",
+                            "otherinfo": "The URL contains potentially sensitive information. The following string was found via the pattern: user\nusername",
+                            "request-header": "POST http://host.docker.internal:8000/vapt/v07/login?username=username&password=ZAP HTTP/1.1\r\nhost: host.docker.internal:8000\r\nuser-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36\r\npragma: no-cache\r\ncache-control: no-cache\r\naccept: application/json\r\ncontent-length: 0\r\n\r\n",
+                            "request-body": "",
+                            "response-header": "HTTP/1.1 401 Unauthorized\r\ndate: Wed, 23 Sep 2026 03:28:24 GMT\r\nserver: uvicorn\r\ncontent-length: 36\r\ncontent-type: application/json\r\n\r\n",
+                            "response-body": "{\"detail\":\"Credenciales inv\u00E1lidas\"}"
+                        },
+                        {
+                            "id": "25",
+                            "uri": "http://host.docker.internal:8000/vapt/v08/log?document=123456789&email=prueba.fleetsec@example.com",
+                            "nodeName": "http:\/\/host.docker.internal:8000\/vapt\/v08\/log (document,email)",
+                            "method": "POST",
+                            "param": "email",
+                            "attack": "",
+                            "evidence": "prueba.fleetsec@example.com",
+                            "otherinfo": "The URL contains email address(es).",
+                            "request-header": "POST http://host.docker.internal:8000/vapt/v08/log?document=123456789&email=prueba.fleetsec@example.com HTTP/1.1\r\nhost: host.docker.internal:8000\r\n\r\n",
+                            "request-body": "",
+                            "response-header": "HTTP/1.1 200 OK\r\ndate: Wed, 23 Sep 2026 03:28:24 GMT\r\nserver: uvicorn\r\ncontent-length: 22\r\ncontent-type: application/json\r\n\r\n",
+                            "response-body": "{\"status\":\"processed\"}"
+                        },
+                        {
+                            "id": "9",
+                            "uri": "http://host.docker.internal:8000/vapt/v08/log?document=document&email=zaproxy@example.com",
+                            "nodeName": "http:\/\/host.docker.internal:8000\/vapt\/v08\/log (document,email)",
+                            "method": "POST",
+                            "param": "email",
+                            "attack": "",
+                            "evidence": "zaproxy@example.com",
+                            "otherinfo": "The URL contains email address(es).",
+                            "request-header": "POST http://host.docker.internal:8000/vapt/v08/log?document=document&email=zaproxy@example.com HTTP/1.1\r\nhost: host.docker.internal:8000\r\nuser-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36\r\npragma: no-cache\r\ncache-control: no-cache\r\naccept: application/json\r\ncontent-length: 0\r\n\r\n",
+                            "request-body": "",
+                            "response-header": "HTTP/1.1 200 OK\r\ndate: Wed, 23 Sep 2026 03:28:24 GMT\r\nserver: uvicorn\r\ncontent-length: 22\r\ncontent-type: application/json\r\n\r\n",
+                            "response-body": "{\"status\":\"processed\"}"
+                        }
+                    ],
+                    "count": "5",
+                    "systemic": false,
+                    "solution": "<p>Do not pass sensitive information in URIs.</p>",
+                    "otherinfo": "<p>The URL contains potentially sensitive information. The following string was found via the pattern: token</p><p>token</p>",
+                    "reference": "",
+                    "cweid": "598",
+                    "wascid": "13",
+                    "sourceid": "11",
+                    "tags":[ 
+                        {
+                            "tag": "CWE-598",
+                            "link": "https:\/\/cwe.mitre.org\/data\/definitions\/598.html"
+                        },
+                        {
+                            "tag": "OWASP_2021_A01",
+                            "link": "https:\/\/owasp.org\/Top10\/A01_2021-Broken_Access_Control\/"
+                        },
+                        {
+                            "tag": "POLICY_QA_STD",
+                            "link": ""
+                        },
+                        {
+                            "tag": "POLICY_PENTEST",
+                            "link": ""
+                        },
+                        {
+                            "tag": "SYSTEMIC",
+                            "link": "https:\/\/www.zaproxy.org\/docs\/desktop\/addons\/common-library\/alerttags\/#systemic"
+                        },
+                        {
+                            "tag": "OWASP_2017_A03",
+                            "link": "https:\/\/owasp.org\/www-project-top-ten\/2017\/A3_2017-Sensitive_Data_Exposure.html"
+                        },
+                        {
+                            "tag": "OWASP_2025_A01",
+                            "link": "https:\/\/owasp.org\/Top10\/2025\/A01_2025-Broken_Access_Control\/"
+                        },
+                        {
+                            "tag": "POLICY_DEV_STD",
+                            "link": ""
+                        }
+                    ]
+                },
+                {
+                    "pluginid": "10104",
+                    "alertRef": "10104",
+                    "alert": "User Agent Fuzzer",
+                    "name": "User Agent Fuzzer",
+                    "riskcode": "0",
+                    "confidence": "2",
+                    "riskdesc": "Informational (Medium)",
+                    "desc": "<p>Check for differences in response based on fuzzed User Agent (eg. mobile sites, access as a Search Engine Crawler). Compares the response statuscode and the hashcode of the response body with the original response.</p>",
+                    "instances":[ 
+                        {
+                            "id": "31",
+                            "uri": "http://host.docker.internal:8000/vapt/v07/login?username=test&password=wrong",
+                            "nodeName": "http:\/\/host.docker.internal:8000\/vapt\/v07\/login (password,username)",
+                            "method": "POST",
+                            "param": "Header User-Agent",
+                            "attack": "Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1)",
+                            "evidence": "",
+                            "otherinfo": "",
+                            "request-header": "POST http://host.docker.internal:8000/vapt/v07/login?username=test&password=wrong HTTP/1.1\r\nhost: host.docker.internal:8000\r\nuser-agent: Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1)\r\ncontent-length: 0\r\n\r\n",
+                            "request-body": "",
+                            "response-header": "HTTP/1.1 429 Too Many Requests\r\ndate: Wed, 23 Sep 2026 03:30:46 GMT\r\nserver: uvicorn\r\nretry-after: 60\r\ncontent-length: 60\r\ncontent-type: application/json\r\n\r\n",
+                            "response-body": "{\"detail\":\"L\u00EDmite de intentos de autenticaci\u00F3n excedido.\"}"
+                        },
+                        {
+                            "id": "30",
+                            "uri": "http://host.docker.internal:8000/vapt/v07/login?username=test&password=wrong",
+                            "nodeName": "http:\/\/host.docker.internal:8000\/vapt\/v07\/login (password,username)",
+                            "method": "POST",
+                            "param": "Header User-Agent",
+                            "attack": "Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 6.0)",
+                            "evidence": "",
+                            "otherinfo": "",
+                            "request-header": "POST http://host.docker.internal:8000/vapt/v07/login?username=test&password=wrong HTTP/1.1\r\nhost: host.docker.internal:8000\r\nuser-agent: Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 6.0)\r\ncontent-length: 0\r\n\r\n",
+                            "request-body": "",
+                            "response-header": "HTTP/1.1 429 Too Many Requests\r\ndate: Wed, 23 Sep 2026 03:30:46 GMT\r\nserver: uvicorn\r\nretry-after: 60\r\ncontent-length: 60\r\ncontent-type: application/json\r\n\r\n",
+                            "response-body": "{\"detail\":\"L\u00EDmite de intentos de autenticaci\u00F3n excedido.\"}"
+                        },
+                        {
+                            "id": "29",
+                            "uri": "http://host.docker.internal:8000/vapt/v07/login?username=test&password=wrong",
+                            "nodeName": "http:\/\/host.docker.internal:8000\/vapt\/v07\/login (password,username)",
+                            "method": "POST",
+                            "param": "Header User-Agent",
+                            "attack": "Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 6.1)",
+                            "evidence": "",
+                            "otherinfo": "",
+                            "request-header": "POST http://host.docker.internal:8000/vapt/v07/login?username=test&password=wrong HTTP/1.1\r\nhost: host.docker.internal:8000\r\nuser-agent: Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 6.1)\r\ncontent-length: 0\r\n\r\n",
+                            "request-body": "",
+                            "response-header": "HTTP/1.1 429 Too Many Requests\r\ndate: Wed, 23 Sep 2026 03:30:46 GMT\r\nserver: uvicorn\r\nretry-after: 60\r\ncontent-length: 60\r\ncontent-type: application/json\r\n\r\n",
+                            "response-body": "{\"detail\":\"L\u00EDmite de intentos de autenticaci\u00F3n excedido.\"}"
+                        }
+                    ],
+                    "count": "3",
+                    "systemic": true,
+                    "solution": "",
+                    "otherinfo": "",
+                    "reference": "<p>https://owasp.org/wstg</p>",
+                    "cweid": "0",
+                    "wascid": "0",
+                    "sourceid": "63",
+                    "tags":[ 
+                        {
+                            "tag": "CUSTOM_PAYLOADS",
+                            "link": ""
+                        },
+                        {
+                            "tag": "POLICY_PENTEST",
+                            "link": ""
+                        },
+                        {
+                            "tag": "SYSTEMIC",
+                            "link": "https:\/\/www.zaproxy.org\/docs\/desktop\/addons\/common-library\/alerttags\/#systemic"
+                        }
+                    ]
+                }
+            ],
+            "statistics":{ 
+                "stats.responseTime.16": 3
+                ,
+                "stats.code.429": 12
+                ,
+                "stats.tag.JSON": 54
+                ,
+                "stats.responseTime.32": 3
+                ,
+                "stats.code.404": 14
+                ,
+                "stats.code.405": 1
+                ,
+                "stats.code.200": 19
+                ,
+                "stats.code.422": 1
+                ,
+                "stats.code.401": 7
+                ,
+                "stats.responseTime.512": 1
+                ,
+                "stats.responseTime.64": 7
+                ,
+                "stats.responseTime.4": 23
+                ,
+                "stats.contentType.application\/json": 54
+                ,
+                "stats.responseTime.8": 17
+                
+            }
+        }
+    ],
+    "sequences":[
+    ],
+    "statistics":{ 
+        "stats.ascan.90035.started": 1
+        ,
+        "stats.pscan.10027.time": 4
+        ,
+        "stats.ascan.40035.started": 1
+        ,
+        "stats.ascan.40027.time": 383
+        ,
+        "stats.ascan.20017.urls": 13
+        ,
+        "stats.pscan.90022.time": 105
+        ,
+        "stats.ascan.40027.urls": 180
+        ,
+        "stats.ascan.20017.time": 71
+        ,
+        "stats.pscan.10112.time": 33
+        ,
+        "stats.ascan.40026.started": 1
+        ,
+        "stats.pscan.10042.time": 0
+        ,
+        "stats.ascan.40044.time": 191
+        ,
+        "stats.ascan.10058.started": 1
+        ,
+        "stats.pscan.10056.time": 2
+        ,
+        "stats.ascan.90017.urls": 124
+        ,
+        "stats.ascan.40029.started": 1
+        ,
+        "stats.pscan.10061.time": 0
+        ,
+        "stats.ascan.10106.started": 1
+        ,
+        "stats.pscan.10109.time": 0
+        ,
+        "stats.ascan.40008.time": 612
+        ,
+        "stats.ascan.90029.started": 1
+        ,
+        "stats.ascan.40044.started": 1
+        ,
+        "stats.ascan.20015.time": 18
+        ,
+        "stats.ascan.20015.urls": 3
+        ,
+        "stats.ascan.40003.started": 1
+        ,
+        "stats.ascan.40032.started": 1
+        ,
+        "stats.ascan.40017.started": 1
+        ,
+        "stats.selenium.launch.2.firefox-headless": 24
+        ,
+        "stats.ascan.20017.started": 1
+        ,
+        "stats.ascan.0.started": 1
+        ,
+        "stats.ascan.40008.urls": 90
+        ,
+        "stats.ascan.90034.time": 67
+        ,
+        "stats.pscan.90003.time": 5
+        ,
+        "stats.pscan.10040.time": 0
+        ,
+        "stats.ascan.started.policy.dock-default": 1
+        ,
+        "stats.pscan.10023.time": 11
+        ,
+        "stats.ascan.90023.started": 1
+        ,
+        "stats.ascan.90034.urls": 13
+        ,
+        "stats.pscan.10029.time": 0
+        ,
+        "stats.ascan.90017.started": 1
+        ,
+        "stats.ascan.10047.time": 73
+        ,
+        "stats.pscan.10017.time": 0
+        ,
+        "stats.ascan.40014.started": 1
+        ,
+        "stats.ascan.10047.started": 1
+        ,
+        "stats.pscan.10011.time": 0
+        ,
+        "stats.ascan.40034.urls": 17
+        ,
+        "stats.pscan.10030.time": 0
+        ,
+        "domxss.scan.count": 43
+        ,
+        "stats.ascan.40034.time": 80
+        ,
+        "stats.pscan.10039.time": 1
+        ,
+        "stats.pscan.10052.time": 0
+        ,
+        "stats.ascan.90026.started": 1
+        ,
+        "stats.pscan.10105.time": 1
+        ,
+        "stats.ascan.90037.time": 617
+        ,
+        "stats.pscan.10035.time": 0
+        ,
+        "stats.ascan.40019.urls": 180
+        ,
+        "stats.ascan.90037.started": 1
+        ,
+        "stats.pscan.90001.time": 1
+        ,
+        "stats.auto.job.alertFilter.run": 1
+        ,
+        "stats.ascan.90036.time": 496
+        ,
+        "stats.auto.jobs.run": 4
+        ,
+        "stats.auto.job.requestor.run": 1
+        ,
+        "stats.pscan.10020.time": 0
+        ,
+        "stats.ascan.90020.started": 1
+        ,
+        "stats.pscan.10034.time": 0
+        ,
+        "stats.ascan.10058.time": 62
+        ,
+        "stats.ascan.40022.time": 193
+        ,
+        "openapi.urls.added": 16
+        ,
+        "stats.ascan.90035.time": 619
+        ,
+        "stats.ascan.30001.started": 1
+        ,
+        "stats.pscan.90030.time": 1
+        ,
+        "stats.ascan.6.started": 1
+        ,
+        "stats.ascan.20015.started": 1
+        ,
+        "stats.ascan.40027.started": 1
+        ,
+        "stats.ascan.40019.time": 350
+        ,
+        "stats.ascan.40003.time": 344
+        ,
+        "stats.pscan.10097.time": 1
+        ,
+        "stats.ascan.40003.urls": 126
+        ,
+        "stats.ascan.40022.urls": 90
+        ,
+        "stats.ascan.90036.urls": 216
+        ,
+        "stats.pscan.10202.time": 0
+        ,
+        "stats.ascan.6.time": 569
+        ,
+        "stats.ascan.40008.started": 1
+        ,
+        "stats.ascan.40021.started": 1
+        ,
+        "stats.ascan.7.urls": 180
+        ,
+        "stats.ascan.40029.time": 101
+        ,
+        "stats.ascan.90020.time": 658
+        ,
+        "stats.pscan.10054.time": 0
+        ,
+        "stats.auto.job.activeScan.run": 1
+        ,
+        "stats.ascan.0.time": 112
+        ,
+        "stats.ascan.40032.time": 84
+        ,
+        "stats.ascan.90017.time": 392
+        ,
+        "stats.ascan.90035.urls": 252
+        ,
+        "stats.ascan.90020.urls": 342
+        ,
+        "stats.ascan.40032.urls": 17
+        ,
+        "stats.pscan.90011.time": 0
+        ,
+        "stats.pscan.10015.time": 0
+        ,
+        "stats.ascan.7.time": 290
+        ,
+        "stats.ascan.90019.started": 1
+        ,
+        "stats.ascan.40042.started": 1
+        ,
+        "stats.ascan.50000.time": 1576
+        ,
+        "stats.ascan.6.urls": 306
+        ,
+        "stats.ascan.40029.urls": 20
+        ,
+        "stats.pscan.90002.time": 0
+        ,
+        "stats.ascan.40045.started": 1
+        ,
+        "stats.pscan.10025.time": 0
+        ,
+        "stats.pscan.10098.time": 1
+        ,
+        "stats.ascan.0.urls": 33
+        ,
+        "stats.ascan.started": 1
+        ,
+        "stats.ascan.40012.started": 1
+        ,
+        "stats.network.send.success": 8445
+        ,
+        "stats.ascan.30002.time": 167
+        ,
+        "stats.pscan.50001.time": 3
+        ,
+        "stats.ascan.40048.time": 6
+        ,
+        "stats.ascan.40042.urls": 2
+        ,
+        "stats.pscan.10044.time": 1
+        ,
+        "stats.pscan.10113.time": 6
+        ,
+        "stats.pscan.Parameter Scanner": 291
+        ,
+        "stats.ascan.30002.urls": 54
+        ,
+        "stats.ascan.40048.urls": 1
+        ,
+        "stats.ascan.40042.time": 10
+        ,
+        "stats.ascan.90026.time": 99
+        ,
+        "stats.network.send.failure": 78
+        ,
+        "stats.ascan.40043.time": 11
+        ,
+        "stats.ascan.40022.started": 1
+        ,
+        "stats.ascan.40043.skipped": 1
+        ,
+        "stats.ascan.10104.time": 3598
+        ,
+        "stats.ascan.30001.urls": 18
+        ,
+        "stats.script.call.Graal.js.active": 164
+        ,
+        "stats.pscan.10043.time": 0
+        ,
+        "stats.ascan.40009.time": 138
+        ,
+        "stats.pscan.10057.time": 17
+        ,
+        "stats.ascan.30001.time": 138
+        ,
+        "stats.ascan.10104.urls": 396
+        ,
+        "stats.ascan.40028.time": 13
+        ,
+        "stats.pscan.10111.time": 17
+        ,
+        "stats.ascan.10048.started": 1
+        ,
+        "stats.ascan.20018.time": 94
+        ,
+        "stats.ascan.40014.time": 54
+        ,
+        "stats.ascan.10048.urls": 36
+        ,
+        "stats.pscan.50003.time": 3
+        ,
+        "stats.ascan.20018.urls": 66
+        ,
+        "stats.ascan.10106.time": 139
+        ,
+        "stats.ascan.100043.started": 1
+        ,
+        "stats.ascan.40028.urls": 1
+        ,
+        "stats.ascan.10048.time": 94
+        ,
+        "stats.ascan.40048.started": 1
+        ,
+        "stats.pscan.10010.time": 2
+        ,
+        "stats.ascan.40009.urls": 72
+        ,
+        "stats.pscan.2.time": 4
+        ,
+        "stats.ascan.90034.started": 1
+        ,
+        "stats.pscan.10024.time": 78
+        ,
+        "stats.pscan.10021.alerts": 19
+        ,
+        "stats.ascan.10104.started": 1
+        ,
+        "stats.pscan.10062.time": 34
+        ,
+        "stats.pscan.10115.time": 0
+        ,
+        "stats.pscan.-1.time": 18
+        ,
+        "stats.ascan.90021.time": 135
+        ,
+        "stats.ascan.40012.urls": 67
+        ,
+        "stats.ascan.40043.started": 1
+        ,
+        "stats.ascan.40018.urls": 403
+        ,
+        "stats.ascan.7.started": 1
+        ,
+        "stats.ascan.100043.time": 2305
+        ,
+        "stats.ascan.40018.started": 1
+        ,
+        "stats.pscan.10033.time": 0
+        ,
+        "stats.pscan.10108.time": 0
+        ,
+        "stats.ascan.20018.started": 1
+        ,
+        "stats.pscan.10036.time": 0
+        ,
+        "stats.ascan.90021.urls": 54
+        ,
+        "stats.ascan.40012.time": 121
+        ,
+        "stats.pscan.10055.time": 0
+        ,
+        "stats.ascan.30002.started": 1
+        ,
+        "stats.ascan.40018.time": 1404
+        ,
+        "stats.pscan.10021.time": 289
+        ,
+        "stats.pscan.recordsToScan": 56
+        ,
+        "stats.auto.job.openapi.run": 1
+        ,
+        "stats.ascan.40009.started": 1
+        ,
+        "stats.ascan.40020.started": 1
+        ,
+        "stats.ascan.90023.time": 69
+        ,
+        "stats.pscan.Anti CSRF Token Detection": 17
+        ,
+        "stats.ascan.40035.time": 213
+        ,
+        "stats.pscan.10096.time": 5
+        ,
+        "stats.ascan.40021.urls": 90
+        ,
+        "stats.ascan.40035.urls": 52
+        ,
+        "stats.ascan.40021.time": 205
+        ,
+        "stats.ascan.90037.urls": 288
+        ,
+        "stats.ascan.100043.urls": 16
+        ,
+        "stats.ascan.90019.time": 250
+        ,
+        "stats.ascan.time": 148491
+        ,
+        "stats.auto.plans.run": 1
+        ,
+        "stats.ascan.90024.time": 72
+        ,
+        "stats.pscan.10050.time": 0
+        ,
+        "stats.pscan.10111.alerts": 1
+        ,
+        "stats.ascan.40017.time": 345
+        ,
+        "stats.pscan.90033.time": 0
+        ,
+        "stats.ascan.10045.urls": 2
+        ,
+        "stats.ascan.40019.started": 1
+        ,
+        "stats.ascan.40017.urls": 33
+        ,
+        "stats.ascan.10106.alerts": 1
+        ,
+        "stats.pscan.10019.time": 0
+        ,
+        "domxss.gets.count": 516
+        ,
+        "stats.ascan.urls": 4543
+        ,
+        "stats.ascan.10104.alerts": 12
+        ,
+        "stats.ascan.40034.started": 1
+        ,
+        "stats.pscan.3.time": 2
+        ,
+        "stats.ascan.20019.started": 1
+        ,
+        "stats.ascan.10045.time": 7
+        ,
+        "stats.pscan.10032.time": 0
+        ,
+        "stats.pscan.10024.alerts": 8
+        ,
+        "stats.ascan.90036.started": 1
+        ,
+        "stats.ascan.40016.urls": 18
+        ,
+        "stats.pscan.10038.time": 0
+        ,
+        "stats.ascan.40016.time": 76
+        ,
+        "stats.pscan.10037.time": 0
+        ,
+        "stats.ascan.90021.started": 1
+        ,
+        "stats.pscan.10031.time": 0
+        ,
+        "stats.ascan.40026.urls": 120
+        ,
+        "stats.ascan.40020.urls": 180
+        ,
+        "stats.auth.detect.auth.json": 1
+        ,
+        "stats.pscan.10028.time": 0
+        ,
+        "stats.ascan.10045.started": 1
+        ,
+        "stats.ascan.20019.urls": 162
+        ,
+        "stats.pscan.10003.time": 1
+        ,
+        "stats.ascan.40028.started": 1
+        ,
+        "stats.pscan.10009.time": 1
+        ,
+        "stats.ascan.40045.urls": 66
+        ,
+        "stats.ascan.90024.started": 1
+        ,
+        "stats.ascan.90019.urls": 144
+        ,
+        "stats.pscan.10041.time": 0
+        ,
+        "stats.ascan.40020.time": 389
+        ,
+        "stats.ascan.40045.time": 552
+        ,
+        "stats.pscan.10116.time": 1012
+        ,
+        "stats.ascan.50000.started": 1
+        ,
+        "stats.ascan.40026.time": 109083
+        ,
+        "stats.ascan.90029.time": 96
+        ,
+        "stats.ascan.20019.time": 256
+        ,
+        "stats.ascan.40016.started": 1
+        
+    },
+    "afPlanErrors": [
+    ],
+    "afPlanWarns": [
+    ]
+}
+

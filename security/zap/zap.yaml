@@ -2,31 +2,121 @@ env:
   contexts:
     - name: fleetsec
       urls:
-        - http://host.docker.internal:8000
-
+        - "http://host.docker.internal:8000"
       authentication:
         method: manual
 
 jobs:
+  # =====================================================
+  # OpenAPI
+  # =====================================================
   - type: openapi
     parameters:
-      apiUrl: http://host.docker.internal:8000/openapi.json
+      apiUrl: "http://host.docker.internal:8000/openapi.json"
       context: fleetsec
-      targetUrl: http://host.docker.internal:8000
+      targetUrl: "http://host.docker.internal:8000"
 
+  # =====================================================
+  # Requestor
+  # Envía solicitudes reales a los endpoints VAPT
+  # =====================================================
+  - type: requestor
+    requests:
+
+      - url: "http://host.docker.internal:8000/vapt/v01/vehicles?plate=ABC123"
+        name: "V01 SQL Injection endpoint"
+        method: GET
+
+      - url: "http://host.docker.internal:8000/vapt/v02/verify?token=invalid"
+        name: "V02 JWT endpoint"
+        method: GET
+
+      - url: "http://host.docker.internal:8000/vapt/v03/fetch?url=https%3A%2F%2Fexample.com"
+        name: "V03 SSRF endpoint"
+        method: GET
+
+      - url: "http://host.docker.internal:8000/vapt/v04/xml?xml=%3Cvehicle%3E%3Cplate%3EABC123%3C%2Fplate%3E%3C%2Fvehicle%3E"
+        name: "V04 XXE endpoint"
+        method: POST
+
+      - url: "http://host.docker.internal:8000/vapt/v05/users/vapt-driver"
+        name: "V05 Mass Assignment endpoint"
+        method: PUT
+        headers:
+          - "Content-Type:application/json"
+        data: '{"username":"vapt-driver"}'
+
+      - url: "http://host.docker.internal:8000/vapt/v06/file?filename=public.txt"
+        name: "V06 Path Traversal endpoint"
+        method: GET
+
+      - url: "http://host.docker.internal:8000/vapt/v07/login?username=test&password=wrong"
+        name: "V07 Login endpoint"
+        method: POST
+
+      - url: "http://host.docker.internal:8000/vapt/v08/log?document=123456789&email=prueba.fleetsec@example.com"
+        name: "V08 PII logging endpoint"
+        method: POST
+
+      - url: "http://host.docker.internal:8000/vapt/v09/vehicles/1"
+        name: "V09 IDOR endpoint"
+        method: GET
+
+      - url: "http://host.docker.internal:8000/vapt/v10/admin?api_key=invalid"
+        name: "V10 credentials endpoint"
+        method: GET
+
+  # =====================================================
+  # Documented false positive suppression
+  # =====================================================
+  # ZAP rule 40018 (SQL Injection) generated a High alert
+  # on POST /vehicles/.
+  #
+  # Manual review:
+  # - Confidence reported by ZAP: 2
+  # - Parameter: None
+  # - Endpoint uses SQLAlchemy ORM
+  # - No raw SQL concatenation is present in this endpoint
+  #
+  # Therefore this specific alert is documented as
+  # False Positive instead of disabling SQL Injection
+  # detection globally.
+  #
+  # Date: 2026-09-22
+  # Responsible: DevSecOps security review.
+  - type: alertFilter
+    parameters:
+      deleteGlobalAlerts: false
+    alertFilters:
+      - ruleId: 40018
+        newRisk: "False Positive"
+        context: fleetsec
+        url: "http://host.docker.internal:8000/vehicles/"
+        methods:
+          - POST
+
+  # =====================================================
+  # Active Scan
+  # =====================================================
   - type: activeScan
     parameters:
       context: fleetsec
 
+  # =====================================================
+  # Report
+  # =====================================================
   - type: report
     parameters:
       template: traditional-json-plus
-      reportDir: /zap/wrk/security/zap/dast-output
-      reportFile: zap-report.json
+      reportDir: "/zap/wrk/security/zap/dast-output"
+      reportFile: "zap-report.json"
 
+  # =====================================================
+  # Sites Tree export
+  # =====================================================
   - type: export
     parameters:
       context: fleetsec
       type: yaml
       source: sitestree
-      fileName: /zap/wrk/security/zap/dast-output/sites-tree.yaml
+      fileName: "/zap/wrk/security/zap/dast-output/sites-tree.yaml"

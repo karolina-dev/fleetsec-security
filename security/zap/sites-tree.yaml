@@ -1,0 +1,156 @@
+- node: Sites
+  children:
+  - node: http://host.docker.internal:8000
+    url: http://host.docker.internal:8000
+    method: GET
+    children:
+    - node: GET:/
+      url: http://host.docker.internal:8000/
+      method: GET
+      responseLength: 153
+      statusCode: 200
+    - node: auth
+      url: http://host.docker.internal:8000/auth
+      method: GET
+      children:
+      - node: "POST:login()({username,password})"
+        url: http://host.docker.internal:8000/auth/login
+        method: POST
+        responseLength: 158
+        statusCode: 200
+        data: '%7B%22username%22%3A%22John+Doe%22%2C%22password%22%3A%22ZAP%22%7D='
+    - node: GET:health
+      url: http://host.docker.internal:8000/health
+      method: GET
+      responseLength: 167
+      statusCode: 200
+    - node: GET:openapi.json
+      url: http://host.docker.internal:8000/openapi.json
+      method: GET
+      responseLength: 8113
+      statusCode: 200
+    - node: users
+      url: http://host.docker.internal:8000/users
+      method: GET
+      children:
+      - node: GET:me
+        url: http://host.docker.internal:8000/users/me
+        method: GET
+        responseLength: 193
+        statusCode: 401
+    - node: vapt
+      url: http://host.docker.internal:8000/vapt
+      method: GET
+      children:
+      - node: v01
+        url: http://host.docker.internal:8000/vapt/v01
+        method: GET
+        children:
+        - node: GET:vehicles(plate)
+          url: http://host.docker.internal:8000/vapt/v01/vehicles?plate=ABC123
+          method: GET
+          responseLength: 181
+          statusCode: 200
+      - node: v02
+        url: http://host.docker.internal:8000/vapt/v02
+        method: GET
+        children:
+        - node: GET:verify(token)
+          url: http://host.docker.internal:8000/vapt/v02/verify?token=invalid
+          method: GET
+          responseLength: 188
+          statusCode: 200
+      - node: v03
+        url: http://host.docker.internal:8000/vapt/v03
+        method: GET
+        children:
+        - node: GET:fetch(url)
+          url: http://host.docker.internal:8000/vapt/v03/fetch?url=https%3A%2F%2Fexample.com
+          method: GET
+          responseLength: 756
+          statusCode: 200
+      - node: v04
+        url: http://host.docker.internal:8000/vapt/v04
+        method: GET
+        children:
+        - node: POST:xml(xml)
+          url: http://host.docker.internal:8000/vapt/v04/xml?xml=%3Cvehicle%3E%3Cplate%3EABC123%3C%2Fplate%3E%3C%2Fvehicle%3E
+          method: POST
+          responseLength: 194
+          statusCode: 200
+          data: =
+      - node: v05
+        url: http://host.docker.internal:8000/vapt/v05
+        method: GET
+        children:
+        - node: users
+          url: http://host.docker.internal:8000/vapt/v05/users
+          method: GET
+          children:
+          - node: PUT:«username»()("John Doe")
+            url: http://host.docker.internal:8000/vapt/v05/users/username
+            method: PUT
+            responseLength: 256
+            statusCode: 422
+          - node: "PUT:«username»()({username})"
+            url: http://host.docker.internal:8000/vapt/v05/users/vapt-driver
+            method: PUT
+            responseLength: 160
+            statusCode: 200
+      - node: v06
+        url: http://host.docker.internal:8000/vapt/v06
+        method: GET
+        children:
+        - node: GET:file(filename)
+          url: http://host.docker.internal:8000/vapt/v06/file?filename=public.txt
+          method: GET
+          responseLength: 160
+          statusCode: 200
+      - node: v07
+        url: http://host.docker.internal:8000/vapt/v07
+        method: GET
+        children:
+        - node: "POST:login(password,username)"
+          url: http://host.docker.internal:8000/vapt/v07/login?username=test&password=wrong
+          method: POST
+          responseLength: 173
+          statusCode: 401
+          data: =
+      - node: v08
+        url: http://host.docker.internal:8000/vapt/v08
+        method: GET
+        children:
+        - node: "POST:log(document,email)"
+          url: http://host.docker.internal:8000/vapt/v08/log?document=123456789&email=prueba.fleetsec@example.com
+          method: POST
+          responseLength: 149
+          statusCode: 200
+          data: =
+      - node: v09
+        url: http://host.docker.internal:8000/vapt/v09
+        method: GET
+        children:
+        - node: vehicles
+          url: http://host.docker.internal:8000/vapt/v09/vehicles
+          method: GET
+          children:
+          - node: GET:«vehicle_id»
+            url: http://host.docker.internal:8000/vapt/v09/vehicles/1
+            method: GET
+            responseLength: 193
+            statusCode: 401
+      - node: v10
+        url: http://host.docker.internal:8000/vapt/v10
+        method: GET
+        children:
+        - node: GET:admin(api_key)
+          url: http://host.docker.internal:8000/vapt/v10/admin?api_key=invalid
+          method: GET
+          responseLength: 183
+          statusCode: 200
+    - node: "POST:vehicles()({plate})"
+      url: http://host.docker.internal:8000/vehicles/
+      method: POST
+      responseLength: 193
+      statusCode: 401
+      data: '%7B%22plate%22%3A%22John+Doe%22%7D='

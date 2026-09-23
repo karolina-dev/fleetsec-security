@@ -1,0 +1,83 @@
+﻿name: FleetSec Break-Glass
+
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize, labeled]
+
+permissions:
+  contents: read
+  pull-requests: read
+  issues: write
+
+jobs:
+  break-glass:
+    if: contains(github.event.pull_request.labels.*.name, 'break-glass')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Validar dos aprobadores distintos
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+        run: |
+          reviews=$(gh api \
+            "/repos/$REPOSITORY/pulls/$PR_NUMBER/reviews")
+
+          approvers=$(printf '%s' "$reviews" | jq -r \
+            --arg author "$PR_AUTHOR" '
+              group_by(.user.login)
+              | map(.[-1])
+              | map(select(.state == "APPROVED" and .user.login != $author))
+              | .[].user.login
+            ' | sort -u)
+
+          count=$(printf '%s\n' "$approvers" | sed '/^$/d' | wc -l)
+
+          echo "Aprobadores:"
+          printf '%s\n' "$approvers"
+          echo "Total: $count"
+
+          if [ "$count" -lt 2 ]; then
+            echo "ERROR: se requieren 2 aprobadores distintos."
+            exit 1
+          fi
+
+      - name: Crear Issue CRITICAL de auditoría
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          ACTOR: ${{ github.actor }}
+        run: |
+          gh label create security/critical \
+            --repo "$REPOSITORY" \
+            --color B60205 \
+            --description "Critical security event" \
+            --force
+
+          existing=$(gh issue list \
+            --repo "$REPOSITORY" \
+            --state open \
+            --label security/critical \
+            --search "Break-glass PR #$PR_NUMBER" \
+            --json number \
+            --jq 'length')
+
+          if [ "$existing" -eq 0 ]; then
+            gh issue create \
+              --repo "$REPOSITORY" \
+              --title "CRITICAL - Break-glass PR #$PR_NUMBER" \
+              --label security/critical \
+              --body "## Break-glass audit
+
+              - Pull Request: #$PR_NUMBER
+              - URL: $PR_URL
+              - Requested by: @$ACTOR
+              - Workflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+              Se requieren dos aprobadores distintos.
+              Este Issue forma parte del registro auditable del proceso."
+          fi

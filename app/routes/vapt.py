@@ -1,14 +1,14 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import text
 from sqlalchemy.orm import Session
-from ..auth import SECRET_KEY, ALGORITHM
+from ..auth import SECRET_KEY, ALGORITHM, get_current_user
 import ipaddress
 import socket
 from urllib.parse import urlparse
 import jwt
 import httpx
 from lxml import etree
-from ..models import User
+from ..models import User, Vehicle
 from pathlib import Path
 import time
 from collections import defaultdict, deque
@@ -337,4 +337,39 @@ def v08_log_pii(document: str, email: str):
 
     return {
         "status": "processed",
+    }
+
+ # V09 - IDOR
+# Remediated version: the authenticated user can only access owned vehicles.
+@router.get("/v09/vehicles/{vehicle_id}")
+def v09_get_vehicle(
+    vehicle_id: int,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    user = db.query(User).filter(
+        User.username == current_user["username"]
+    ).first()
+
+    if not user:
+        raise HTTPException(
+            status_code=401,
+            detail="Usuario no válido",
+        )
+
+    vehicle = db.query(Vehicle).filter(
+        Vehicle.id == vehicle_id,
+        Vehicle.owner_id == user.id,
+    ).first()
+
+    if not vehicle:
+        raise HTTPException(
+            status_code=403,
+            detail="No tiene acceso a este vehículo",
+        )
+
+    return {
+        "id": vehicle.id,
+        "plate": vehicle.plate,
+        "owner_id": vehicle.owner_id,
     }

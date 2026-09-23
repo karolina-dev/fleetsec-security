@@ -1,0 +1,18 @@
+#!/bin/sh
+
+echo "Ejecutando Gitleaks sobre los cambios staged..."
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+
+if ! MSYS_NO_PATHCONV=1 docker run --rm \
+  -v "$REPO_ROOT:/repo" \
+  -w /repo \
+  zricethezav/gitleaks:v8.24.2 \
+  git --staged --redact --config .gitleaks.toml
+then
+  echo "Gitleaks detectó posibles secretos. Commit bloqueado."
+  exit 1
+fi
+
+echo "Gitleaks no detectó secretos."
+exit 0

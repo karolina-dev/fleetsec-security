@@ -1,24 +1,23 @@
-from fastapi import APIRouter, Depends, HTTPException
+from collections import defaultdict, deque
+import ipaddress
+import logging
+import os
+from pathlib import Path
+import re
+import socket
+import time
+from urllib.parse import urlparse
+
+import httpx
+import jwt
+from fastapi import APIRouter, Depends, HTTPException, Request
+from lxml import etree
 from sqlalchemy import text
 from sqlalchemy.orm import Session
-from ..auth import SECRET_KEY, ALGORITHM, get_current_user
-import ipaddress
-import socket
-from urllib.parse import urlparse
-import jwt
-import httpx
-from lxml import etree
-from ..models import User, Vehicle
-from pathlib import Path
-import time
-from collections import defaultdict, deque
-import logging
-import re
-import os
 
-from fastapi import HTTPException, Request
-
+from ..auth import ALGORITHM, SECRET_KEY, get_current_user
 from ..database import get_db
+from ..models import User, Vehicle
 
 
 router = APIRouter(prefix="/vapt", tags=["VAPT"])
@@ -52,7 +51,10 @@ def v01_search_vehicles(
         "results": [dict(row) for row in rows]
     }
 
+
+# =========================================================
 # V02 - JWT alg:none
+# =========================================================
 # Remediated version: signature and algorithm are explicitly validated.
 @router.get("/v02/verify")
 def v02_verify_token(token: str):
@@ -77,21 +79,27 @@ def v02_verify_token(token: str):
             "detail": "Token inválido o firma no válida",
         }
 
+
+# =========================================================
 # V03 - SSRF
+# =========================================================
 # Remediated version: only HTTPS URLs to an explicit allowlist are permitted.
 ALLOWED_SSRF_HOSTS = {
     "example.com",
 }
 
+
 def is_private_or_local_host(hostname: str) -> bool:
     try:
         ip = ipaddress.ip_address(hostname)
+
         return (
             ip.is_private
             or ip.is_loopback
             or ip.is_link_local
             or ip.is_reserved
         )
+
     except ValueError:
         try:
             addresses = socket.getaddrinfo(
@@ -161,7 +169,10 @@ def v03_fetch_url(url: str):
             "error": "No fue posible consultar el recurso"
         }
 
+
+# =========================================================
 # V04 - XXE
+# =========================================================
 # Remediated version: external entities and DTD processing are disabled.
 @router.post("/v04/xml")
 def v04_parse_xml(xml: str):
@@ -187,11 +198,14 @@ def v04_parse_xml(xml: str):
 
     except Exception:
         return {
-        "valid": False,
-        "error": "XML inválido o no permitido",
-    }
+            "valid": False,
+            "error": "XML inválido o no permitido",
+        }
 
+
+# =========================================================
 # V05 - Mass Assignment
+# =========================================================
 # Remediated version: only explicitly allowed fields can be updated.
 @router.put("/v05/users/{username}")
 def v05_update_user(
@@ -199,7 +213,9 @@ def v05_update_user(
     data: dict,
     db: Session = Depends(get_db),
 ):
-    user = db.query(User).filter(User.username == username).first()
+    user = db.query(User).filter(
+        User.username == username
+    ).first()
 
     if not user:
         return {
@@ -221,7 +237,10 @@ def v05_update_user(
         "role": user.role,
     }
 
+
+# =========================================================
 # V06 - Path Traversal
+# =========================================================
 # Remediated version: resolved path must remain inside the allowed directory.
 @router.get("/v06/file")
 def v06_read_file(filename: str):
@@ -253,16 +272,23 @@ def v06_read_file(filename: str):
             "error": "No fue posible leer el archivo"
         }
 
+
+# =========================================================
 # V07 - Missing Rate Limiting
-# Remediated version: 5 requests per minute per client.
+# =========================================================
+# Remediated version: 5 login attempts per minute per client.
 RATE_LIMIT = 5
 RATE_WINDOW = 60
 
 request_history = defaultdict(deque)
 
 
-@router.get("/v07/search")
-def v07_search(q: str, request: Request):
+@router.post("/v07/login")
+def v07_login(
+    username: str,
+    password: str,
+    request: Request,
+):
     client_ip = request.client.host if request.client else "unknown"
     now = time.monotonic()
 
@@ -274,25 +300,36 @@ def v07_search(q: str, request: Request):
     if len(history) >= RATE_LIMIT:
         raise HTTPException(
             status_code=429,
-            detail="Límite de solicitudes excedido. Intente nuevamente más tarde.",
-            headers={"Retry-After": str(RATE_WINDOW)},
+            detail="Límite de intentos de autenticación excedido.",
+            headers={
+                "Retry-After": str(RATE_WINDOW)
+            },
         )
 
     history.append(now)
 
-    return {
-        "query": q,
-        "results": [
-            {
-                "id": 1,
-                "vehicle": "ABC123",
-            }
-        ],
-    }
+    expected_username = os.getenv("FLEETSEC_ADMIN_USERNAME")
+    expected_password = os.getenv("FLEETSEC_ADMIN_PASSWORD")
 
+    if (
+        username == expected_username
+        and password == expected_password
+    ):
+        return {
+            "authenticated": True,
+            "message": "Autenticación correcta",
+        }
+
+    raise HTTPException(
+        status_code=401,
+        detail="Credenciales inválidas",
+    )
+
+
+# =========================================================
 # V08 - Logging de PII
+# =========================================================
 # Remediated version: PII is redacted before being written to logs.
-
 class PIISanitizingFormatter(logging.Formatter):
     def format(self, record):
         message = super().format(record)
@@ -329,7 +366,10 @@ if not vapt_logger.handlers:
 
 
 @router.post("/v08/log")
-def v08_log_pii(document: str, email: str):
+def v08_log_pii(
+    document: str,
+    email: str,
+):
     vapt_logger.info(
         "Usuario procesado document=%s email=%s",
         document,
@@ -340,7 +380,10 @@ def v08_log_pii(document: str, email: str):
         "status": "processed",
     }
 
- # V09 - IDOR
+
+# =========================================================
+# V09 - IDOR
+# =========================================================
 # Remediated version: the authenticated user can only access owned vehicles.
 @router.get("/v09/vehicles/{vehicle_id}")
 def v09_get_vehicle(
@@ -375,7 +418,10 @@ def v09_get_vehicle(
         "owner_id": vehicle.owner_id,
     }
 
-  # V10 - Hardcoded Credentials
+
+# =========================================================
+# V10 - Hardcoded Credentials
+# =========================================================
 # Remediated version: credential is loaded from an environment variable.
 @router.get("/v10/admin")
 def v10_admin(api_key: str):

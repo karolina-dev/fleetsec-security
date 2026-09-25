@@ -1379,3 +1379,103 @@ resource "aws_cloudwatch_metric_alarm" "disable_key_rotation" {
   comparison_operator = "GreaterThanOrEqualToThreshold"
   treat_missing_data  = "notBreaching"
 }
+
+# ---------------------------------------------------------
+# AWS Config - Managed Security Rules
+# ---------------------------------------------------------
+
+resource "aws_config_config_rule" "cloudtrail_enabled" {
+  name = "fleetsec-cloudtrail-enabled"
+
+  source {
+    owner             = "AWS"
+    source_identifier = "CLOUD_TRAIL_ENABLED"
+  }
+
+  depends_on = [
+    aws_config_configuration_recorder_status.fleetsec
+  ]
+}
+
+resource "aws_config_config_rule" "encrypted_volumes" {
+  name = "fleetsec-encrypted-volumes"
+
+  source {
+    owner             = "AWS"
+    source_identifier = "ENCRYPTED_VOLUMES"
+  }
+
+  depends_on = [
+    aws_config_configuration_recorder_status.fleetsec
+  ]
+}
+
+resource "aws_config_config_rule" "guardduty_enabled" {
+  name = "fleetsec-guardduty-enabled"
+
+  source {
+    owner             = "AWS"
+    source_identifier = "GUARDDUTY_ENABLED_CENTRALIZED"
+  }
+
+  depends_on = [
+    aws_config_configuration_recorder_status.fleetsec,
+    aws_guardduty_detector.fleetsec
+  ]
+}
+
+resource "aws_config_config_rule" "s3_public_read_prohibited" {
+  name = "fleetsec-s3-public-read-prohibited"
+
+  source {
+    owner             = "AWS"
+    source_identifier = "S3_BUCKET_PUBLIC_READ_PROHIBITED"
+  }
+
+  scope {
+    compliance_resource_types = [
+      "AWS::S3::Bucket"
+    ]
+  }
+
+  depends_on = [
+    aws_config_configuration_recorder_status.fleetsec
+  ]
+}
+
+resource "aws_config_config_rule" "iam_password_policy" {
+  name = "fleetsec-iam-password-policy"
+
+  source {
+    owner             = "AWS"
+    source_identifier = "IAM_PASSWORD_POLICY"
+  }
+
+  input_parameters = jsonencode({
+    RequireUppercaseCharacters   = "true"
+    RequireLowercaseCharacters   = "true"
+    RequireSymbols                = "true"
+    RequireNumbers                = "true"
+    MinimumPasswordLength         = "14"
+    PasswordReusePrevention       = "24"
+    MaxPasswordAge                = "90"
+  })
+
+  depends_on = [
+    aws_config_configuration_recorder_status.fleetsec,
+    aws_iam_account_password_policy.fleetsec
+  ]
+}
+
+resource "aws_config_config_rule" "root_account_mfa" {
+  name = "fleetsec-root-account-mfa-enabled"
+
+  source {
+    owner             = "AWS"
+    source_identifier = "ROOT_ACCOUNT_MFA_ENABLED"
+  }
+
+  depends_on = [
+    aws_config_configuration_recorder_status.fleetsec
+  ]
+}

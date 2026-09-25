@@ -11,14 +11,22 @@ terraform {
 
 provider "aws" {
   region = var.aws_region
+
+  skip_credentials_validation = true
+  skip_requesting_account_id  = true
+  skip_metadata_api_check     = true
+  skip_region_validation      = true
 }
 
 provider "aws" {
   alias  = "dr"
   region = var.dr_region
-}
 
-data "aws_caller_identity" "current" {}
+  skip_credentials_validation = true
+  skip_requesting_account_id  = true
+  skip_metadata_api_check     = true
+  skip_region_validation      = true
+}
 
 # ---------------------------------------------------------
 # KMS - Primary Region
@@ -38,7 +46,7 @@ resource "aws_kms_key" "fleetsec" {
         Effect = "Allow"
 
         Principal = {
-          AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
+          AWS = "arn:aws:iam::${var.aws_account_id}:root"
         }
 
         Action   = "kms:*"
@@ -61,7 +69,7 @@ resource "aws_kms_key" "fleetsec" {
 
         Condition = {
           StringEquals = {
-            "aws:SourceAccount" = data.aws_caller_identity.current.account_id
+            "aws:SourceAccount" = var.aws_account_id
           }
         }
       }
@@ -94,7 +102,7 @@ resource "aws_kms_key" "fleetsec_dr" {
         Effect = "Allow"
 
         Principal = {
-          AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
+          AWS = "arn:aws:iam::${var.aws_account_id}:root"
         }
 
         Action   = "kms:*"
@@ -115,8 +123,10 @@ resource "aws_kms_alias" "fleetsec_dr" {
 # ---------------------------------------------------------
 
 resource "aws_s3_bucket" "security_logs" {
-  bucket = var.security_logs_bucket
+  bucket              = var.security_logs_bucket
+  object_lock_enabled = true
 }
+
 
 resource "aws_s3_bucket_public_access_block" "security_logs" {
   bucket = aws_s3_bucket.security_logs.id
@@ -143,6 +153,38 @@ resource "aws_s3_bucket_versioning" "security_logs" {
   }
 }
 
+# ---------------------------------------------------------
+# S3 - Security Logs Lifecycle and Object Lock
+# ---------------------------------------------------------
+
+resource "aws_s3_bucket_lifecycle_configuration" "security_logs" {
+  bucket = aws_s3_bucket.security_logs.id
+
+  rule {
+    id     = "archive-security-logs"
+    status = "Enabled"
+
+    filter {}
+
+    transition {
+      days          = 180
+      storage_class = "GLACIER"
+    }
+  }
+}
+
+resource "aws_s3_bucket_object_lock_configuration" "security_logs" {
+  bucket = aws_s3_bucket.security_logs.id
+
+  rule {
+    default_retention {
+      mode = "COMPLIANCE"
+      days = 365
+    }
+  }
+}
+
+
 resource "aws_s3_bucket_server_side_encryption_configuration" "security_logs" {
   bucket = aws_s3_bucket.security_logs.id
 
@@ -159,6 +201,7 @@ resource "aws_s3_bucket_logging" "security_logs" {
   target_bucket = aws_s3_bucket.cloudtrail.id
   target_prefix = "access-logs/security-logs/"
 }
+
 
 # ---------------------------------------------------------
 # S3 - Security Logs DR
@@ -250,6 +293,82 @@ resource "aws_iam_policy" "fleetsec_security_readonly" {
         ]
 
         Resource = "*"
+      }
+    ]
+  })
+}
+
+# ---------------------------------------------------------
+# IAM - Account Password Policy
+# ---------------------------------------------------------
+
+resource "aws_iam_account_password_policy" "fleetsec" {
+  minimum_password_length        = 14
+  password_reuse_prevention      = 24
+  max_password_age               = 90
+  require_lowercase_characters   = true
+  require_uppercase_characters   = true
+  require_numbers                = true
+  require_symbols                = true
+  allow_users_to_change_password = true
+}
+
+# ---------------------------------------------------------
+# IAM - ECS Application Role
+# ---------------------------------------------------------
+
+resource "aws_iam_role" "ecs_task" {
+  name = "FleetSecECSTaskRole"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+
+    Statement = [
+      {
+        Effect = "Allow"
+
+        Principal = {
+          Service = "ecs-tasks.amazonaws.com"
+        }
+
+        Action = "sts:AssumeRole"
+      }
+    ]
+  })
+
+  tags = {
+    Name = "FleetSecECSTaskRole"
+    Tier = "application"
+  }
+}
+
+resource "aws_iam_role_policy" "ecs_task" {
+  name = "FleetSecECSTaskLeastPrivilege"
+  role = aws_iam_role.ecs_task.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+
+    Statement = [
+      {
+        Sid    = "ReadApplicationSecret"
+        Effect = "Allow"
+
+        Action = [
+          "secretsmanager:GetSecretValue"
+        ]
+
+        Resource = aws_secretsmanager_secret.fleetsec_app.arn
+      },
+      {
+        Sid    = "DecryptApplicationSecret"
+        Effect = "Allow"
+
+        Action = [
+          "kms:Decrypt"
+        ]
+
+        Resource = aws_kms_key.fleetsec.arn
       }
     ]
   })
@@ -372,7 +491,7 @@ resource "aws_secretsmanager_secret" "fleetsec_app" {
 # ---------------------------------------------------------
 
 resource "aws_vpc" "fleetsec" {
-  cidr_block           = "10.0.0.0/16"
+  cidr_block           = var.vpc_cidr
   enable_dns_support   = true
   enable_dns_hostnames = true
 
@@ -380,6 +499,351 @@ resource "aws_vpc" "fleetsec" {
     Name = "fleetsec-vpc"
   }
 }
+
+# ---------------------------------------------------------
+# VPC Flow Logs - S3 + CloudWatch
+# ---------------------------------------------------------
+
+resource "aws_cloudwatch_log_group" "vpc_flow_logs" {
+  name              = "/aws/vpc/flow-logs/fleetsec"
+  retention_in_days = 90
+  kms_key_id        = aws_kms_key.fleetsec.arn
+}
+
+resource "aws_iam_role" "vpc_flow_logs" {
+  name = "FleetSecVPCFlowLogsRole"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+
+    Statement = [
+      {
+        Effect = "Allow"
+
+        Principal = {
+          Service = "vpc-flow-logs.amazonaws.com"
+        }
+
+        Action = "sts:AssumeRole"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy" "vpc_flow_logs" {
+  name = "FleetSecVPCFlowLogsPolicy"
+  role = aws_iam_role.vpc_flow_logs.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+
+    Statement = [
+      {
+        Effect = "Allow"
+
+        Action = [
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+        ]
+
+        Resource = "${aws_cloudwatch_log_group.vpc_flow_logs.arn}:*"
+      }
+    ]
+  })
+}
+
+resource "aws_flow_log" "fleetsec_cloudwatch" {
+  vpc_id                   = aws_vpc.fleetsec.id
+  traffic_type             = "ALL"
+  max_aggregation_interval = 60
+
+  log_destination_type = "cloud-watch-logs"
+  log_destination      = aws_cloudwatch_log_group.vpc_flow_logs.arn
+  iam_role_arn         = aws_iam_role.vpc_flow_logs.arn
+
+  tags = {
+    Name = "fleetsec-vpc-flow-logs-cloudwatch"
+  }
+}
+
+resource "aws_flow_log" "fleetsec_s3" {
+  vpc_id                   = aws_vpc.fleetsec.id
+  traffic_type             = "ALL"
+  max_aggregation_interval = 60
+
+  log_destination_type = "s3"
+  log_destination      = "${aws_s3_bucket.security_logs.arn}/vpc-flow-logs/"
+
+  tags = {
+    Name = "fleetsec-vpc-flow-logs-s3"
+  }
+}
+
+# ---------------------------------------------------------
+# VPC - Subnets: Public / App / Data across 2 AZs
+# ---------------------------------------------------------
+
+resource "aws_subnet" "public" {
+  count = length(var.availability_zones)
+
+  vpc_id                  = aws_vpc.fleetsec.id
+  availability_zone       = var.availability_zones[count.index]
+  cidr_block              = var.public_subnet_cidrs[count.index]
+  map_public_ip_on_launch = true
+
+  tags = {
+    Name = "fleetsec-public-${count.index + 1}"
+    Tier = "public"
+  }
+}
+
+resource "aws_subnet" "app" {
+  count = length(var.availability_zones)
+
+  vpc_id                  = aws_vpc.fleetsec.id
+  availability_zone       = var.availability_zones[count.index]
+  cidr_block              = var.app_subnet_cidrs[count.index]
+  map_public_ip_on_launch = false
+
+  tags = {
+    Name = "fleetsec-app-${count.index + 1}"
+    Tier = "app"
+  }
+}
+
+resource "aws_subnet" "data" {
+  count = length(var.availability_zones)
+
+  vpc_id                  = aws_vpc.fleetsec.id
+  availability_zone       = var.availability_zones[count.index]
+  cidr_block              = var.data_subnet_cidrs[count.index]
+  map_public_ip_on_launch = false
+
+  tags = {
+    Name = "fleetsec-data-${count.index + 1}"
+    Tier = "data"
+  }
+}
+
+resource "aws_internet_gateway" "fleetsec" {
+  vpc_id = aws_vpc.fleetsec.id
+
+  tags = {
+    Name = "fleetsec-igw"
+  }
+}
+
+resource "aws_route_table" "public" {
+  vpc_id = aws_vpc.fleetsec.id
+
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.fleetsec.id
+  }
+
+  tags = {
+    Name = "fleetsec-public-rt"
+  }
+}
+
+resource "aws_route_table_association" "public" {
+  count = length(var.availability_zones)
+
+  subnet_id      = aws_subnet.public[count.index].id
+  route_table_id = aws_route_table.public.id
+}
+
+# ---------------------------------------------------------
+# Network ACL - Restricted Data Layer
+# ---------------------------------------------------------
+
+resource "aws_network_acl" "data" {
+  vpc_id = aws_vpc.fleetsec.id
+
+  tags = {
+    Name = "fleetsec-data-nacl"
+    Tier = "data"
+  }
+}
+
+resource "aws_network_acl_rule" "data_ingress_postgres" {
+  count = length(var.app_subnet_cidrs)
+
+  network_acl_id = aws_network_acl.data.id
+  rule_number    = 100 + count.index
+  egress         = false
+  protocol       = "tcp"
+  rule_action    = "allow"
+  cidr_block     = var.app_subnet_cidrs[count.index]
+  from_port      = 5432
+  to_port        = 5432
+}
+
+resource "aws_network_acl_rule" "data_egress_ephemeral" {
+  count = length(var.app_subnet_cidrs)
+
+  network_acl_id = aws_network_acl.data.id
+  rule_number    = 200 + count.index
+  egress         = true
+  protocol       = "tcp"
+  rule_action    = "allow"
+  cidr_block     = var.app_subnet_cidrs[count.index]
+  from_port      = 1024
+  to_port        = 65535
+}
+
+resource "aws_network_acl_association" "data" {
+  count = length(var.availability_zones)
+
+  network_acl_id = aws_network_acl.data.id
+  subnet_id      = aws_subnet.data[count.index].id
+}
+
+resource "aws_route_table" "app" {
+  vpc_id = aws_vpc.fleetsec.id
+
+  tags = {
+    Name = "fleetsec-app-rt"
+  }
+}
+
+resource "aws_route_table_association" "app" {
+  count = length(var.availability_zones)
+
+  subnet_id      = aws_subnet.app[count.index].id
+  route_table_id = aws_route_table.app.id
+}
+
+resource "aws_route_table" "data" {
+  vpc_id = aws_vpc.fleetsec.id
+
+  tags = {
+    Name = "fleetsec-data-rt"
+  }
+}
+
+resource "aws_route_table_association" "data" {
+  count = length(var.availability_zones)
+
+  subnet_id      = aws_subnet.data[count.index].id
+  route_table_id = aws_route_table.data.id
+}
+
+# ---------------------------------------------------------
+# RDS - PostgreSQL Secure Database
+# ---------------------------------------------------------
+
+resource "aws_security_group" "rds" {
+  name        = "fleetsec-rds-sg"
+  description = "Allow PostgreSQL only from FleetSec app subnets"
+  vpc_id      = aws_vpc.fleetsec.id
+
+  dynamic "ingress" {
+    for_each = var.app_subnet_cidrs
+
+    content {
+      description = "PostgreSQL from app subnet"
+      from_port   = 5432
+      to_port     = 5432
+      protocol    = "tcp"
+      cidr_blocks = [ingress.value]
+    }
+  }
+
+  egress {
+    description = "HTTPS outbound"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "fleetsec-rds-sg"
+    Tier = "data"
+  }
+}
+
+resource "aws_db_subnet_group" "fleetsec" {
+  name       = "fleetsec-db-subnet-group"
+  subnet_ids = aws_subnet.data[*].id
+
+  tags = {
+    Name = "fleetsec-db-subnet-group"
+  }
+}
+
+resource "aws_db_parameter_group" "fleetsec" {
+  name   = "fleetsec-postgres16"
+  family = "postgres16"
+
+  parameter {
+    name  = "rds.force_ssl"
+    value = "1"
+  }
+
+  parameter {
+    name  = "log_connections"
+    value = "1"
+  }
+
+  tags = {
+    Name = "fleetsec-postgres16"
+  }
+}
+
+resource "aws_db_instance" "fleetsec" {
+  identifier = "fleetsec-postgres"
+
+  engine         = "postgres"
+  engine_version = "16"
+
+  instance_class        = "db.t3.micro"
+  allocated_storage     = 20
+  max_allocated_storage = 100
+  storage_type          = "gp3"
+
+  db_name  = "fleetsec"
+  username = "fleetsec_admin"
+
+  manage_master_user_password   = true
+  master_user_secret_kms_key_id = aws_kms_key.fleetsec.arn
+
+  multi_az            = true
+  publicly_accessible = false
+
+  storage_encrypted = true
+  kms_key_id        = aws_kms_key.fleetsec.arn
+
+  backup_retention_period = 7
+  copy_tags_to_snapshot   = true
+
+  db_subnet_group_name   = aws_db_subnet_group.fleetsec.name
+  parameter_group_name   = aws_db_parameter_group.fleetsec.name
+  vpc_security_group_ids = [aws_security_group.rds.id]
+
+  deletion_protection = true
+  skip_final_snapshot = true
+
+  tags = {
+    Name = "fleetsec-postgres"
+    Tier = "data"
+  }
+}
+
+resource "aws_secretsmanager_secret_rotation" "fleetsec_rds" {
+  secret_id          = aws_db_instance.fleetsec.master_user_secret[0].secret_arn
+  rotate_immediately = false
+
+  rotation_rules {
+    automatically_after_days = 30
+  }
+
+  depends_on = [
+    aws_db_instance.fleetsec
+  ]
+}
+
 
 # ---------------------------------------------------------
 # Security Group
@@ -591,6 +1055,140 @@ resource "aws_s3_bucket_replication_configuration" "cloudtrail" {
       }
     }
   }
+}
+
+# ---------------------------------------------------------
+# AWS Config
+# ---------------------------------------------------------
+
+resource "aws_iam_role" "config" {
+  name = "FleetSecAWSConfigRole"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+
+    Statement = [
+      {
+        Effect = "Allow"
+
+        Principal = {
+          Service = "config.amazonaws.com"
+        }
+
+        Action = "sts:AssumeRole"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "config" {
+  role       = aws_iam_role.config.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWS_ConfigRole"
+}
+
+resource "aws_config_configuration_recorder" "fleetsec" {
+  name     = "fleetsec-config"
+  role_arn = aws_iam_role.config.arn
+
+  recording_group {
+    all_supported                 = true
+    include_global_resource_types = true
+  }
+
+  depends_on = [
+    aws_iam_role_policy_attachment.config
+  ]
+}
+
+resource "aws_config_delivery_channel" "fleetsec" {
+  name           = "fleetsec-config"
+  s3_bucket_name = aws_s3_bucket.security_logs.id
+
+  depends_on = [
+    aws_config_configuration_recorder.fleetsec
+  ]
+}
+
+# ---------------------------------------------------------
+# Amazon GuardDuty
+# ---------------------------------------------------------
+
+resource "aws_guardduty_detector" "fleetsec" {
+  enable = true
+
+  finding_publishing_frequency = "FIFTEEN_MINUTES"
+
+  tags = {
+    Name = "fleetsec-guardduty"
+  }
+}
+
+# ---------------------------------------------------------
+# AWS Security Hub
+# ---------------------------------------------------------
+
+resource "aws_securityhub_account" "fleetsec" {
+  enable_default_standards = true
+
+  depends_on = [
+    aws_guardduty_detector.fleetsec
+  ]
+}
+
+# ---------------------------------------------------------
+# AWS WAF
+# ---------------------------------------------------------
+
+resource "aws_wafv2_web_acl" "fleetsec" {
+  name        = "fleetsec-waf"
+  description = "FleetSec regional web application firewall"
+  scope       = "REGIONAL"
+
+  default_action {
+    allow {}
+  }
+
+  rule {
+    name     = "AWSManagedRulesCommonRuleSet"
+    priority = 1
+
+    override_action {
+      none {}
+    }
+
+    statement {
+      managed_rule_group_statement {
+        name        = "AWSManagedRulesCommonRuleSet"
+        vendor_name = "AWS"
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "fleetsec-waf-common"
+      sampled_requests_enabled   = true
+    }
+  }
+
+  visibility_config {
+    cloudwatch_metrics_enabled = true
+    metric_name                = "fleetsec-waf"
+    sampled_requests_enabled   = true
+  }
+
+  tags = {
+    Name = "fleetsec-waf"
+  }
+}
+
+
+resource "aws_config_configuration_recorder_status" "fleetsec" {
+  name       = aws_config_configuration_recorder.fleetsec.name
+  is_enabled = true
+
+  depends_on = [
+    aws_config_delivery_channel.fleetsec
+  ]
 }
 
 # ---------------------------------------------------------

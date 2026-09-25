@@ -589,7 +589,7 @@ resource "aws_subnet" "public" {
   vpc_id                  = aws_vpc.fleetsec.id
   availability_zone       = var.availability_zones[count.index]
   cidr_block              = var.public_subnet_cidrs[count.index]
-  map_public_ip_on_launch = true
+  map_public_ip_on_launch = false
 
   tags = {
     Name = "fleetsec-public-${count.index + 1}"
@@ -815,6 +815,8 @@ resource "aws_db_instance" "fleetsec" {
   storage_encrypted = true
   kms_key_id        = aws_kms_key.fleetsec.arn
 
+  enabled_cloudwatch_logs_exports = ["postgresql"]
+
   backup_retention_period = 7
   copy_tags_to_snapshot   = true
 
@@ -998,267 +1000,122 @@ resource "aws_s3_bucket_replication_configuration" "security_logs" {
     id     = "security-logs-dr"
     status = "Enabled"
 
-    filter {
-      prefix = ""
-    }
+    # ---------------------------------------------------------
+# CloudTrail - Metric Filters + CloudWatch Alarms
+# ---------------------------------------------------------
 
-    source_selection_criteria {
-      sse_kms_encrypted_objects {
-        status = "Enabled"
-      }
-    }
+# Root account successful console login
+resource "aws_cloudwatch_log_metric_filter" "root_console_login" {
+  name           = "fleetsec-root-console-login"
+  log_group_name = aws_cloudwatch_log_group.cloudtrail.name
 
-    destination {
-      bucket        = aws_s3_bucket.security_logs_dr.arn
-      storage_class = "STANDARD"
+  pattern = <<PATTERN
+{ ($.eventName = "ConsoleLogin") && ($.userIdentity.type = "Root") && ($.responseElements.ConsoleLogin = "Success") }
+PATTERN
 
-      encryption_configuration {
-        replica_kms_key_id = aws_kms_key.fleetsec_dr.arn
-      }
-    }
+  metric_transformation {
+    name      = "FleetSecRootConsoleLogin"
+    namespace = "FleetSec/Security"
+    value     = "1"
   }
 }
 
-# ---------------------------------------------------------
-# S3 Replication - CloudTrail
-# ---------------------------------------------------------
+resource "aws_cloudwatch_metric_alarm" "root_console_login" {
+  alarm_name          = "fleetsec-root-console-login"
+  alarm_description   = "Detecta inicio de sesión exitoso de la cuenta root."
+  namespace           = "FleetSec/Security"
+  metric_name         = "FleetSecRootConsoleLogin"
+  statistic           = "Sum"
+  period              = 300
+  evaluation_periods  = 1
+  threshold           = 1
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  treat_missing_data  = "notBreaching"
+}
 
-resource "aws_s3_bucket_replication_configuration" "cloudtrail" {
-  depends_on = [
-    aws_s3_bucket_versioning.cloudtrail,
-    aws_s3_bucket_versioning.cloudtrail_dr
-  ]
+# IAM changes
+resource "aws_cloudwatch_log_metric_filter" "iam_changes" {
+  name           = "fleetsec-iam-changes"
+  log_group_name = aws_cloudwatch_log_group.cloudtrail.name
 
-  bucket = aws_s3_bucket.cloudtrail.id
-  role   = aws_iam_role.s3_replication.arn
+  pattern = <<PATTERN
+{ ($.eventName = "CreateUser") || ($.eventName = "DeleteUser") || ($.eventName = "CreateRole") || ($.eventName = "DeleteRole") || ($.eventName = "AttachRolePolicy") || ($.eventName = "DetachRolePolicy") || ($.eventName = "PutRolePolicy") || ($.eventName = "DeleteRolePolicy") || ($.eventName = "CreatePolicy") || ($.eventName = "DeletePolicy") || ($.eventName = "UpdateAssumeRolePolicy") || ($.eventName = "AddUserToGroup") || ($.eventName = "RemoveUserFromGroup") }
+PATTERN
 
-  rule {
-    id     = "cloudtrail-dr"
-    status = "Enabled"
-
-    filter {
-      prefix = ""
-    }
-
-    source_selection_criteria {
-      sse_kms_encrypted_objects {
-        status = "Enabled"
-      }
-    }
-
-    destination {
-      bucket        = aws_s3_bucket.cloudtrail_dr.arn
-      storage_class = "STANDARD"
-
-      encryption_configuration {
-        replica_kms_key_id = aws_kms_key.fleetsec_dr.arn
-      }
-    }
+  metric_transformation {
+    name      = "FleetSecIAMChanges"
+    namespace = "FleetSec/Security"
+    value     = "1"
   }
 }
 
-# ---------------------------------------------------------
-# AWS Config
-# ---------------------------------------------------------
-
-resource "aws_iam_role" "config" {
-  name = "FleetSecAWSConfigRole"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-
-    Statement = [
-      {
-        Effect = "Allow"
-
-        Principal = {
-          Service = "config.amazonaws.com"
-        }
-
-        Action = "sts:AssumeRole"
-      }
-    ]
-  })
+resource "aws_cloudwatch_metric_alarm" "iam_changes" {
+  alarm_name          = "fleetsec-iam-changes"
+  alarm_description   = "Detecta cambios relevantes en IAM."
+  namespace           = "FleetSec/Security"
+  metric_name         = "FleetSecIAMChanges"
+  statistic           = "Sum"
+  period              = 300
+  evaluation_periods  = 1
+  threshold           = 1
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  treat_missing_data  = "notBreaching"
 }
 
-resource "aws_iam_role_policy_attachment" "config" {
-  role       = aws_iam_role.config.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AWS_ConfigRole"
-}
+# Security Group changes
+resource "aws_cloudwatch_log_metric_filter" "security_group_changes" {
+  name           = "fleetsec-security-group-changes"
+  log_group_name = aws_cloudwatch_log_group.cloudtrail.name
 
-resource "aws_config_configuration_recorder" "fleetsec" {
-  name     = "fleetsec-config"
-  role_arn = aws_iam_role.config.arn
+  pattern = <<PATTERN
+{ ($.eventName = "AuthorizeSecurityGroupIngress") || ($.eventName = "AuthorizeSecurityGroupEgress") || ($.eventName = "RevokeSecurityGroupIngress") || ($.eventName = "RevokeSecurityGroupEgress") || ($.eventName = "CreateSecurityGroup") || ($.eventName = "DeleteSecurityGroup") || ($.eventName = "UpdateSecurityGroupRuleDescriptionsIngress") || ($.eventName = "UpdateSecurityGroupRuleDescriptionsEgress") }
+PATTERN
 
-  recording_group {
-    all_supported                 = true
-    include_global_resource_types = true
-  }
-
-  depends_on = [
-    aws_iam_role_policy_attachment.config
-  ]
-}
-
-resource "aws_config_delivery_channel" "fleetsec" {
-  name           = "fleetsec-config"
-  s3_bucket_name = aws_s3_bucket.security_logs.id
-
-  depends_on = [
-    aws_config_configuration_recorder.fleetsec
-  ]
-}
-
-# ---------------------------------------------------------
-# Amazon GuardDuty
-# ---------------------------------------------------------
-
-resource "aws_guardduty_detector" "fleetsec" {
-  enable = true
-
-  finding_publishing_frequency = "FIFTEEN_MINUTES"
-
-  tags = {
-    Name = "fleetsec-guardduty"
+  metric_transformation {
+    name      = "FleetSecSecurityGroupChanges"
+    namespace = "FleetSec/Security"
+    value     = "1"
   }
 }
 
-# ---------------------------------------------------------
-# AWS Security Hub
-# ---------------------------------------------------------
-
-resource "aws_securityhub_account" "fleetsec" {
-  enable_default_standards = true
-
-  depends_on = [
-    aws_guardduty_detector.fleetsec
-  ]
+resource "aws_cloudwatch_metric_alarm" "security_group_changes" {
+  alarm_name          = "fleetsec-security-group-changes"
+  alarm_description   = "Detecta cambios en Security Groups."
+  namespace           = "FleetSec/Security"
+  metric_name         = "FleetSecSecurityGroupChanges"
+  statistic           = "Sum"
+  period              = 300
+  evaluation_periods  = 1
+  threshold           = 1
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  treat_missing_data  = "notBreaching"
 }
 
-# ---------------------------------------------------------
-# AWS WAF
-# ---------------------------------------------------------
+# Disable KMS key rotation
+resource "aws_cloudwatch_log_metric_filter" "disable_key_rotation" {
+  name           = "fleetsec-disable-key-rotation"
+  log_group_name = aws_cloudwatch_log_group.cloudtrail.name
 
-resource "aws_wafv2_web_acl" "fleetsec" {
-  name        = "fleetsec-waf"
-  description = "FleetSec regional web application firewall"
-  scope       = "REGIONAL"
+  pattern = <<PATTERN
+{ $.eventName = "DisableKeyRotation" }
+PATTERN
 
-  default_action {
-    allow {}
-  }
-
-  rule {
-    name     = "AWSManagedRulesCommonRuleSet"
-    priority = 1
-
-    override_action {
-      none {}
-    }
-
-    statement {
-      managed_rule_group_statement {
-        name        = "AWSManagedRulesCommonRuleSet"
-        vendor_name = "AWS"
-      }
-    }
-
-    visibility_config {
-      cloudwatch_metrics_enabled = true
-      metric_name                = "fleetsec-waf-common"
-      sampled_requests_enabled   = true
-    }
-  }
-
-  visibility_config {
-    cloudwatch_metrics_enabled = true
-    metric_name                = "fleetsec-waf"
-    sampled_requests_enabled   = true
-  }
-
-  tags = {
-    Name = "fleetsec-waf"
+  metric_transformation {
+    name      = "FleetSecDisableKeyRotation"
+    namespace = "FleetSec/Security"
+    value     = "1"
   }
 }
 
-
-resource "aws_config_configuration_recorder_status" "fleetsec" {
-  name       = aws_config_configuration_recorder.fleetsec.name
-  is_enabled = true
-
-  depends_on = [
-    aws_config_delivery_channel.fleetsec
-  ]
-}
-
-# ---------------------------------------------------------
-# CloudWatch Logs
-# ---------------------------------------------------------
-
-resource "aws_cloudwatch_log_group" "cloudtrail" {
-  name              = "/aws/cloudtrail/fleetsec"
-  retention_in_days = 90
-  kms_key_id        = aws_kms_key.fleetsec.arn
-}
-
-resource "aws_iam_role" "cloudtrail_to_cloudwatch" {
-  name = "FleetSecCloudTrailCloudWatchRole"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-
-    Statement = [
-      {
-        Effect = "Allow"
-
-        Principal = {
-          Service = "cloudtrail.amazonaws.com"
-        }
-
-        Action = "sts:AssumeRole"
-      }
-    ]
-  })
-}
-
-resource "aws_iam_role_policy" "cloudtrail_to_cloudwatch" {
-  name = "FleetSecCloudTrailCloudWatchPolicy"
-  role = aws_iam_role.cloudtrail_to_cloudwatch.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-
-    Statement = [
-      {
-        Effect = "Allow"
-
-        Action = [
-          "logs:CreateLogStream",
-          "logs:PutLogEvents"
-        ]
-
-        Resource = "${aws_cloudwatch_log_group.cloudtrail.arn}:*"
-      }
-    ]
-  })
-}
-
-# ---------------------------------------------------------
-# CloudTrail
-# ---------------------------------------------------------
-
-resource "aws_cloudtrail" "fleetsec" {
-  name                          = "fleetsec-audit"
-  s3_bucket_name                = aws_s3_bucket.cloudtrail.id
-  include_global_service_events = true
-  is_multi_region_trail         = true
-  enable_log_file_validation    = true
-  kms_key_id                    = aws_kms_key.fleetsec.arn
-
-  cloud_watch_logs_group_arn = "${aws_cloudwatch_log_group.cloudtrail.arn}:*"
-  cloud_watch_logs_role_arn  = aws_iam_role.cloudtrail_to_cloudwatch.arn
-
-  depends_on = [
-    aws_iam_role_policy.cloudtrail_to_cloudwatch
-  ]
+resource "aws_cloudwatch_metric_alarm" "disable_key_rotation" {
+  alarm_name          = "fleetsec-disable-key-rotation"
+  alarm_description   = "Detecta intentos de deshabilitar la rotación de claves KMS."
+  namespace           = "FleetSec/Security"
+  metric_name         = "FleetSecDisableKeyRotation"
+  statistic           = "Sum"
+  period              = 300
+  evaluation_periods  = 1
+  threshold           = 1
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  treat_missing_data  = "notBreaching"
 }
